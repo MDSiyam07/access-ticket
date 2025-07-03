@@ -7,6 +7,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Camera, CheckCircle, XCircle, Type } from 'lucide-react';
 import toast from 'react-hot-toast';
+import MobileQRScanner from '@/components/MobileQRScanner';
 import LoadingSpinner from '@/components/LoadingSpinner';
 
 type ScanResult = 'success' | 'already-used' | 'invalid' | null;
@@ -91,13 +92,19 @@ export default function ScanEntry() {
     }
   }, [manualTicket, handleScan]);
 
+  const handleQRScanSuccess = useCallback((decodedText: string) => {
+    console.log('QR Code scanned:', decodedText);
+    handleScan(decodedText);
+  }, [handleScan]);
+
+  const handleQRScanError = useCallback((error: string) => {
+    console.error('QR Scan error:', error);
+    toast.error('Erreur lors du scan du QR code');
+  }, []);
+
   const startCamera = useCallback(() => {
     setIsScanning(true);
-    // Simuler un scan pour le moment
-    setTimeout(() => {
-      handleScan('DEMO-' + Math.random().toString(36).substr(2, 6).toUpperCase());
-    }, 2000);
-  }, [handleScan]);
+  }, []);
 
   const stopCamera = useCallback(() => {
     setIsScanning(false);
@@ -196,17 +203,15 @@ export default function ScanEntry() {
                     </div>
                   )}
                 </div>
-              ) : isScanning ? (
-                <div className="text-center">
-                  <LoadingSpinner size="lg" text="Scan en cours..." />
-                </div>
               ) : (
-                <div className="text-center">
-                  <Camera className="w-24 h-24 text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-400 text-lg">
-                    Prêt à scanner
-                  </p>
-                </div>
+                <MobileQRScanner
+                  onScanSuccess={handleQRScanSuccess}
+                  onScanError={handleQRScanError}
+                  isScanning={isScanning}
+                  onStartScan={startCamera}
+                  onStopScan={stopCamera}
+                  className="w-full h-full"
+                />
               )}
             </div>
           </div>
