@@ -10,11 +10,7 @@ import SimpleQRScanner from '@/components/SimpleQRScanner';
 
 type ScanResult = 'success' | 'already-used' | 'invalid' | null;
 
-interface ScanEntryProps {
-  onScanComplete?: (ticketId: string, result: ScanResult) => void;
-}
-
-export default function ScanEntry({ onScanComplete }: ScanEntryProps) {
+export default function ScanEntry() {
   const [isScanning, setIsScanning] = useState(false);
   const [scanResult, setScanResult] = useState<ScanResult>(null);
   const [scannedTicket, setScannedTicket] = useState('');
@@ -62,9 +58,6 @@ export default function ScanEntry({ onScanComplete }: ScanEntryProps) {
       setScanResult(result);
       setIsScanning(false);
 
-      // Call callback if provided
-      onScanComplete?.(ticketId, result);
-
       // Show toast notifications
       if (result === 'success') {
         toast.success(`Billet ${ticketId} validé avec succès`);
@@ -79,7 +72,7 @@ export default function ScanEntry({ onScanComplete }: ScanEntryProps) {
         resetScanResult();
       }, 3000);
     }, 1000);
-  }, [simulateTicketScan, onScanComplete, resetScanResult]);
+  }, [simulateTicketScan, resetScanResult]);
 
   const handleQRScanSuccess = useCallback((decodedText: string) => {
     console.log('QR Code scanned:', decodedText);

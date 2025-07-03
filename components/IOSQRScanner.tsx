@@ -290,9 +290,9 @@ export default function IOSQRScanner({
                     <p>Conseils pour iOS :</p>
                     <ul className="text-left mt-2">
                       <li>• Utilisez Safari (pas Chrome/Firefox)</li>
-                      <li>• Installez l'app sur l'écran d'accueil</li>
-                      <li>• Autorisez l'accès caméra</li>
-                      <li>• Essayez l'option "Sélectionner une image"</li>
+                      <li>• Installez l&apos;app sur l&apos;écran d&apos;accueil</li>
+                      <li>• Autorisez l&apos;accès caméra</li>
+                      <li>• Essayez l&apos;option &quot;Sélectionner une image&quot;</li>
                     </ul>
                   </div>
                   

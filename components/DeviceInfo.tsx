@@ -122,7 +122,7 @@ export default function DeviceInfo() {
       
       <div className="space-y-2 text-sm">
         <div className="flex items-center justify-between">
-          <span className="text-gray-600">Type d'appareil:</span>
+          <span className="text-gray-600">Type d&apos;appareil:</span>
           <span className="font-medium">
             {deviceInfo.isMobile 
               ? deviceInfo.isIOS 

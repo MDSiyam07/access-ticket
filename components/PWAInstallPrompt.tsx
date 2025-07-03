@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { X, Download, Smartphone } from 'lucide-react';
 
 export default function PWAInstallPrompt() {
-  const [deferredPrompt, setDeferredPrompt] = useState<Event | null>(null);
+  const [deferredPrompt, setDeferredPrompt] = useState<{ prompt: () => Promise<{ outcome: string }>; userChoice: Promise<{ outcome: string }> } | null>(null);
   const [showInstallPrompt, setShowInstallPrompt] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
   const [isStandalone, setIsStandalone] = useState(false);
@@ -22,9 +22,10 @@ export default function PWAInstallPrompt() {
     setIsStandalone(isStandaloneMode);
 
     // Listen for beforeinstallprompt event (Android/Chrome)
-    const handleBeforeInstallPrompt = (e: any) => {
+    const handleBeforeInstallPrompt = (e: Event) => {
       e.preventDefault();
-      setDeferredPrompt(e);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      setDeferredPrompt(e as any);
       setShowInstallPrompt(true);
     };
 
