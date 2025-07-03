@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Camera, CheckCircle, XCircle, Type } from 'lucide-react';
 import toast from 'react-hot-toast';
 import SimpleQRScanner from '@/components/SimpleQRScanner';
+import LoadingSpinner from '@/components/LoadingSpinner';
 
 type ScanResult = 'success' | 'already-used' | 'invalid' | null;
 
@@ -127,13 +128,17 @@ export default function ScanEntry() {
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
             Scan d&apos;Entrée
           </h1>
-          <p className="text-gray-600">
-            Chargement...
-          </p>
+          <LoadingSpinner size="lg" text="Initialisation..." />
         </div>
       </div>
     );
   }
+
+  // Error handling for mobile compatibility
+  const handleError = (error: Error) => {
+    console.error('Scan entry error:', error);
+    toast.error('Une erreur est survenue. Veuillez réessayer.');
+  };
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">

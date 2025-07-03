@@ -79,6 +79,12 @@ export default function SimpleQRScanner({
     setIsInitializing(true);
     setError(null);
     try {
+      // Vérifier si l'élément existe déjà
+      const existingElement = document.getElementById("qr-reader");
+      if (existingElement) {
+        existingElement.innerHTML = '';
+      }
+
       html5QrCodeRef.current = new Html5Qrcode("qr-reader");
       const config = {
         fps: isMobile ? 5 : 10,
@@ -117,8 +123,10 @@ export default function SimpleQRScanner({
       setIsInitializing(false);
 
     } catch (error: any) {
+      console.error('Scanner initialization error:', error);
       setIsInitializing(false);
       let errorMessage = 'Erreur lors de l\'initialisation du scanner';
+      
       if (error?.name === 'NotAllowedError') {
         errorMessage = 'Accès à la caméra refusé. Autorisez la caméra.';
         toast.error(errorMessage);
@@ -128,10 +136,14 @@ export default function SimpleQRScanner({
       } else if (error?.name === 'NotSupportedError') {
         errorMessage = 'Navigateur ne supporte pas la caméra.';
         toast.error(errorMessage);
+      } else if (error?.message?.includes('Camera streaming not supported')) {
+        errorMessage = 'Safari iOS ne supporte pas le streaming caméra. Utilisez l\'option "Sélectionner une image".';
+        toast.error(errorMessage);
       } else {
-        errorMessage = `Erreur: ${error.message || error}`;
+        errorMessage = `Erreur: ${error?.message || error}`;
         toast.error(errorMessage);
       }
+      
       setError(errorMessage);
       if (onScanError) onScanError(errorMessage);
     }

@@ -6,6 +6,7 @@ import Navbar from "@/components/Navbar";
 import { AuthProvider } from "@/app/contexts/AuthContext";
 import PWAInstallPrompt from "@/components/PWAInstallPrompt";
 import ServiceWorkerRegistration from "@/components/ServiceWorkerRegistration";
+import ErrorBoundary from "@/components/ErrorBoundary";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -54,16 +55,31 @@ export default function RootLayout({
         <meta name="application-name" content="AccessTicket" />
         <meta name="msapplication-TileColor" content="#1e40af" />
         <meta name="msapplication-tap-highlight" content="no" />
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+        <meta name="format-detection" content="telephone=no" />
+        <meta name="theme-color" content="#1e40af" />
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        suppressHydrationWarning={true}
       >
-        <ServiceWorkerRegistration />
-        <AuthProvider>
-          <Navbar>{children}</Navbar>
-          <Toaster position="top-right" />
-          <PWAInstallPrompt />
-        </AuthProvider>
+        <ErrorBoundary>
+          <ServiceWorkerRegistration />
+          <AuthProvider>
+            <Navbar>{children}</Navbar>
+            <Toaster 
+              position="top-right" 
+              toastOptions={{
+                duration: 4000,
+                style: {
+                  background: '#363636',
+                  color: '#fff',
+                },
+              }}
+            />
+            <PWAInstallPrompt />
+          </AuthProvider>
+        </ErrorBoundary>
       </body>
     </html>
   );
