@@ -40,7 +40,7 @@ const QrScanner = ({ onScan }: { onScan: (result: string) => void }) => {
             scanner.stop();
           },
           (err) => {
-            // Optionnel : logs erreurs de scan
+            console.error(err);
           }
         );
       } catch (err) {
