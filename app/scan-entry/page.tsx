@@ -7,7 +7,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Camera, CheckCircle, XCircle, Type } from 'lucide-react';
 import toast from 'react-hot-toast';
-import MobileQRScanner from '@/components/MobileQRScanner';
+import SimpleCameraTest from '@/components/SimpleCameraTest';
 import LoadingSpinner from '@/components/LoadingSpinner';
 
 type ScanResult = 'success' | 'already-used' | 'invalid' | null;
@@ -60,7 +60,14 @@ export default function ScanEntry() {
   }, []);
 
   const handleScan = useCallback((ticketId: string) => {
-    setIsScanning(true);
+    console.log('Traitement du billet:', ticketId);
+    
+    // Éviter les scans multiples
+    if (scanResult || isScanning) {
+      console.log('Scan déjà en cours ou résultat déjà affiché');
+      return;
+    }
+    
     setScannedTicket(ticketId);
     
     timeoutRef.current = setTimeout(() => {
@@ -82,7 +89,7 @@ export default function ScanEntry() {
         resetScanResult();
       }, 3000);
     }, 1000);
-  }, [simulateTicketScan, resetScanResult]);
+  }, [simulateTicketScan, resetScanResult, scanResult, isScanning]);
 
   const handleManualScan = useCallback(() => {
     if (manualTicket.trim()) {
@@ -94,6 +101,8 @@ export default function ScanEntry() {
 
   const handleQRScanSuccess = useCallback((decodedText: string) => {
     console.log('QR Code scanned:', decodedText);
+    // Arrêter le scanner avant de traiter le résultat
+    setIsScanning(false);
     handleScan(decodedText);
   }, [handleScan]);
 
@@ -103,10 +112,12 @@ export default function ScanEntry() {
   }, []);
 
   const startCamera = useCallback(() => {
+    console.log('Démarrage du scanner...');
     setIsScanning(true);
   }, []);
 
   const stopCamera = useCallback(() => {
+    console.log('Arrêt du scanner...');
     setIsScanning(false);
   }, []);
 
@@ -204,7 +215,7 @@ export default function ScanEntry() {
                   )}
                 </div>
               ) : (
-                <MobileQRScanner
+                <SimpleCameraTest
                   onScanSuccess={handleQRScanSuccess}
                   onScanError={handleQRScanError}
                   isScanning={isScanning}

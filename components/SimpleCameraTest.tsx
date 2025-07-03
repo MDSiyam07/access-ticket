@@ -6,7 +6,7 @@ import { Camera, AlertCircle, RefreshCw } from 'lucide-react';
 import toast from 'react-hot-toast';
 import LoadingSpinner from './LoadingSpinner';
 
-interface MobileQRScannerProps {
+interface SimpleCameraTestProps {
   onScanSuccess: (decodedText: string) => void;
   onScanError?: (error: string) => void;
   isScanning: boolean;
@@ -15,34 +15,25 @@ interface MobileQRScannerProps {
   className?: string;
 }
 
-export default function MobileQRScanner({
+export default function SimpleCameraTest({
   onScanSuccess,
   onScanError,
   isScanning,
   onStartScan,
   onStopScan,
   className = ""
-}: MobileQRScannerProps) {
+}: SimpleCameraTestProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const [isInitializing, setIsInitializing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [isMobile, setIsMobile] = useState(false);
-  const [isIOS, setIsIOS] = useState(false);
-
-  // Détecter le type d'appareil
-  useEffect(() => {
-    const userAgent = navigator.userAgent || navigator.vendor;
-    const isMobileDevice = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(userAgent.toLowerCase());
-    const isIOSDevice = /ipad|iphone|ipod/.test(userAgent.toLowerCase());
-    setIsMobile(isMobileDevice);
-    setIsIOS(isIOSDevice);
-  }, []);
+  const [hasStarted, setHasStarted] = useState(false);
 
   // Démarrer la caméra
   const startCamera = useCallback(async () => {
-    if (isInitializing) return;
+    if (isInitializing || hasStarted) return;
     
+    console.log('Démarrage de la caméra...');
     setIsInitializing(true);
     setError(null);
 
@@ -56,27 +47,19 @@ export default function MobileQRScanner({
         }
       };
 
+      console.log('Demande d\'accès à la caméra...');
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
       streamRef.current = stream;
 
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         await videoRef.current.play();
+        console.log('Caméra activée avec succès');
       }
 
       setIsInitializing(false);
-
-      // Simuler une détection de QR code après 3 secondes pour test
-      const testTimeout = setTimeout(() => {
-        if (isScanning && streamRef.current) {
-          const testQRCode = 'TEST-' + Math.random().toString(36).substr(2, 6).toUpperCase();
-          console.log('QR Code de test détecté:', testQRCode);
-          onScanSuccess(testQRCode);
-        }
-      }, 3000);
-
-      // Nettoyer le timeout si le composant est démonté
-      return () => clearTimeout(testTimeout);
+      setHasStarted(true);
+      onStartScan();
 
     } catch (err) {
       console.error('Erreur d\'accès à la caméra:', err);
@@ -105,10 +88,12 @@ export default function MobileQRScanner({
         onScanError(errorMessage);
       }
     }
-  }, [isInitializing, isScanning, onStartScan, onScanError]);
+  }, [isInitializing, hasStarted, onStartScan, onScanError]);
 
   // Arrêter la caméra
   const stopCamera = useCallback(() => {
+    console.log('Arrêt de la caméra...');
+    
     if (streamRef.current) {
       streamRef.current.getTracks().forEach(track => track.stop());
       streamRef.current = null;
@@ -120,17 +105,18 @@ export default function MobileQRScanner({
 
     setError(null);
     setIsInitializing(false);
+    setHasStarted(false);
     onStopScan();
   }, [onStopScan]);
 
   // Gérer le changement d'état de scan
   useEffect(() => {
-    if (isScanning && !isInitializing && !streamRef.current) {
+    if (isScanning && !isInitializing && !hasStarted) {
       startCamera();
-    } else if (!isScanning && streamRef.current) {
+    } else if (!isScanning && hasStarted) {
       stopCamera();
     }
-  }, [isScanning, isInitializing, startCamera, stopCamera]);
+  }, [isScanning, isInitializing, hasStarted, startCamera, stopCamera]);
 
   // Nettoyage
   useEffect(() => {
@@ -153,11 +139,20 @@ export default function MobileQRScanner({
 
   const handleRetry = () => {
     setError(null);
+    setHasStarted(false);
     if (isScanning) {
       stopCamera();
       setTimeout(() => {
         onStartScan();
       }, 500);
+    }
+  };
+
+  const handleTestScan = () => {
+    if (hasStarted) {
+      const testQRCode = 'TEST-' + Math.random().toString(36).substr(2, 6).toUpperCase();
+      console.log('Test QR Code:', testQRCode);
+      onScanSuccess(testQRCode);
     }
   };
 
@@ -169,22 +164,14 @@ export default function MobileQRScanner({
             <Camera className="w-16 h-16 text-gray-400" />
           </div>
           <p className="text-gray-600 mb-4">
-            Cliquez pour démarrer le scanner QR code
+            Cliquez pour démarrer la caméra
           </p>
-          {isMobile && (
-            <p className="text-sm text-gray-500 mb-4">
-              {isIOS 
-                ? 'Sur iOS, autorisez l\'accès à la caméra quand demandé'
-                : 'Autorisez l\'accès à la caméra quand demandé'
-              }
-            </p>
-          )}
           <Button
             onClick={handleStartScan}
             className="w-full h-14 text-lg festival-button"
           >
             <Camera className="w-6 h-6 mr-3" />
-            Démarrer le scanner
+            Démarrer la caméra
           </Button>
         </div>
       ) : (
@@ -200,17 +187,6 @@ export default function MobileQRScanner({
               <div className="text-center text-white p-4">
                 <AlertCircle className="w-12 h-12 text-red-400 mx-auto mb-4" />
                 <p className="text-red-400 mb-4">{error}</p>
-                {isMobile && (
-                  <div className="text-sm text-gray-400 mb-4">
-                    <p>Conseils pour mobile :</p>
-                    <ul className="text-left mt-2">
-                      <li>• Vérifiez les permissions caméra</li>
-                      <li>• Utilisez Safari sur iOS</li>
-                      <li>• Rechargez la page si nécessaire</li>
-                      <li>• Vérifiez que vous êtes en HTTPS</li>
-                    </ul>
-                  </div>
-                )}
                 <div className="space-y-2">
                   <Button
                     onClick={handleRetry}
@@ -241,7 +217,7 @@ export default function MobileQRScanner({
             />
             
             {/* Zone de scan */}
-            {!isInitializing && !error && (
+            {!isInitializing && !error && hasStarted && (
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                 <div className="border-4 border-white border-opacity-50 rounded-lg relative w-48 h-48">
                   <div className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-white"></div>
@@ -256,18 +232,28 @@ export default function MobileQRScanner({
           <p className="text-sm text-gray-600 mt-2 text-center">
             {isInitializing 
               ? 'Initialisation...' 
-              : 'Positionnez le QR code dans la zone de scan (test: 3s)'
+              : hasStarted 
+                ? 'Caméra active - Cliquez "Test Scan" pour simuler'
+                : 'Prêt à démarrer'
             }
           </p>
 
-          {!isInitializing && !error && (
-            <Button
-              onClick={handleStopScan}
-              variant="outline"
-              className="w-full mt-4"
-            >
-              Arrêter le scanner
-            </Button>
+          {!isInitializing && !error && hasStarted && (
+            <div className="space-y-2 mt-4">
+              <Button
+                onClick={handleTestScan}
+                className="w-full"
+              >
+                Test Scan (Simulation)
+              </Button>
+              <Button
+                onClick={handleStopScan}
+                variant="outline"
+                className="w-full"
+              >
+                Arrêter la caméra
+              </Button>
+            </div>
           )}
         </div>
       )}
