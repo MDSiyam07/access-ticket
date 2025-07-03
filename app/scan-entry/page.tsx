@@ -7,7 +7,6 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Camera, CheckCircle, XCircle, Type } from 'lucide-react';
 import toast from 'react-hot-toast';
-import SimpleQRScanner from '@/components/SimpleQRScanner';
 import LoadingSpinner from '@/components/LoadingSpinner';
 
 type ScanResult = 'success' | 'already-used' | 'invalid' | null;
@@ -19,16 +18,24 @@ export default function ScanEntry() {
   const [manualTicket, setManualTicket] = useState('');
   const [showManualInput, setShowManualInput] = useState(false);
   const [isClient, setIsClient] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const scanAreaRef = useRef<HTMLDivElement>(null);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Ensure we're on the client side
   useEffect(() => {
     setIsClient(true);
+    
+    // Simuler un délai de chargement pour mobile
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+    }, 1000);
+
     return () => {
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current);
       }
+      clearTimeout(timer);
     };
   }, []);
 
@@ -76,16 +83,6 @@ export default function ScanEntry() {
     }, 1000);
   }, [simulateTicketScan, resetScanResult]);
 
-  const handleQRScanSuccess = useCallback((decodedText: string) => {
-    console.log('QR Code scanned:', decodedText);
-    handleScan(decodedText);
-  }, [handleScan]);
-
-  const handleQRScanError = useCallback((error: string) => {
-    console.error('QR Scan error:', error);
-    toast.error('Erreur lors du scan du QR code');
-  }, []);
-
   const handleManualScan = useCallback(() => {
     if (manualTicket.trim()) {
       handleScan(manualTicket.trim());
@@ -96,7 +93,11 @@ export default function ScanEntry() {
 
   const startCamera = useCallback(() => {
     setIsScanning(true);
-  }, []);
+    // Simuler un scan pour le moment
+    setTimeout(() => {
+      handleScan('DEMO-' + Math.random().toString(36).substr(2, 6).toUpperCase());
+    }, 2000);
+  }, [handleScan]);
 
   const stopCamera = useCallback(() => {
     setIsScanning(false);
@@ -121,7 +122,7 @@ export default function ScanEntry() {
   }, []);
 
   // Don't render until we're on the client side
-  if (!isClient) {
+  if (!isClient || isLoading) {
     return (
       <div className="max-w-2xl mx-auto space-y-6">
         <div className="text-center mb-8">
@@ -195,16 +196,17 @@ export default function ScanEntry() {
                     </div>
                   )}
                 </div>
+              ) : isScanning ? (
+                <div className="text-center">
+                  <LoadingSpinner size="lg" text="Scan en cours..." />
+                </div>
               ) : (
-                <SimpleQRScanner
-                  onScanSuccess={handleQRScanSuccess}
-                  onScanError={handleQRScanError}
-                  isScanning={isScanning}
-                  onStartScan={startCamera}
-                  onStopScan={stopCamera}
-                  title="Scanner d'Entrée"
-                  className="w-full h-full"
-                />
+                <div className="text-center">
+                  <Camera className="w-24 h-24 text-gray-400 mx-auto mb-4" />
+                  <p className="text-gray-400 text-lg">
+                    Prêt à scanner
+                  </p>
+                </div>
               )}
             </div>
           </div>
@@ -286,220 +288,3 @@ export default function ScanEntry() {
     </div>
   );
 }
-
-// "use client";
-
-// import React, { useState, useRef, useEffect, useCallback } from "react";
-// import { Button } from "@/components/ui/button";
-// import { Card, CardContent } from "@/components/ui/card";
-// import { Input } from "@/components/ui/input";
-// import { Camera, CheckCircle, XCircle, Type } from "lucide-react";
-// import toast from "react-hot-toast";
-// import { Html5Qrcode } from "html5-qrcode";
-
-// type ScanResult = "success" | "already-used" | "invalid" | null;
-
-// export default function ScanEntry() {
-//   const [isScanning, setIsScanning] = useState(false);
-//   const [scanResult, setScanResult] = useState<ScanResult>(null);
-//   const [scannedTicket, setScannedTicket] = useState("");
-//   const [manualTicket, setManualTicket] = useState("");
-//   const [showManualInput, setShowManualInput] = useState(false);
-//   const [isClient, setIsClient] = useState(false);
-//   const scanAreaRef = useRef<HTMLDivElement>(null);
-//   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
-//   const scannerRef = useRef<Html5Qrcode | null>(null);
-
-//   useEffect(() => {
-//     setIsClient(true);
-//     return () => {
-//       if (timeoutRef.current) clearTimeout(timeoutRef.current);
-//     };
-//   }, []);
-
-//   const simulateTicketScan = useCallback((ticketId: string): ScanResult => {
-//     const random = Math.random();
-//     if (random < 0.7) return "success";
-//     else if (random < 0.9) return "already-used";
-//     return "invalid";
-//   }, []);
-
-//   const resetScanResult = useCallback(() => {
-//     setScanResult(null);
-//     setScannedTicket("");
-//   }, []);
-
-//   const handleScan = useCallback(
-//     (ticketId: string) => {
-//       setIsScanning(false);
-//       setScannedTicket(ticketId);
-
-//       timeoutRef.current = setTimeout(() => {
-//         const result = simulateTicketScan(ticketId);
-//         setScanResult(result);
-
-//         if (result === "success") toast.success(`Billet ${ticketId} validé avec succès`);
-//         else if (result === "already-used") toast.error(`Le billet ${ticketId} a déjà été scanné`);
-//         else toast.error(`Le billet ${ticketId} n'est pas valide`);
-
-//         timeoutRef.current = setTimeout(() => {
-//           resetScanResult();
-//         }, 3000);
-//       }, 1000);
-//     },
-//     [simulateTicketScan, resetScanResult]
-//   );
-
-//   const startCamera = useCallback(async () => {
-//     setIsScanning(true);
-
-//     try {
-//       const devices = await navigator.mediaDevices.enumerateDevices();
-//       const videoDevices = devices.filter((d) => d.kind === "videoinput");
-
-//       const backCamera =
-//         videoDevices.find((d) => /back|rear/i.test(d.label)) || videoDevices[0];
-
-//       if (!backCamera) {
-//         toast.error("Aucune caméra disponible");
-//         return;
-//       }
-
-//       const scanner = new Html5Qrcode("qr-reader");
-//       scannerRef.current = scanner;
-
-//       await scanner.start(
-//         { deviceId: { exact: backCamera.deviceId } },
-//         { fps: 10, qrbox: { width: 250, height: 250 } },
-//         (decodedText) => {
-//           handleScan(decodedText);
-//           scanner.stop();
-//         },
-//         (error) => {
-//           console.error("Scan error:", error);
-//         }
-//       );
-//     } catch (err) {
-//       console.error(err);
-//       toast.error("Erreur d'accès à la caméra");
-//     }
-//   }, [handleScan]);
-
-//   const stopCamera = useCallback(() => {
-//     scannerRef.current?.stop().then(() => scannerRef.current?.clear());
-//   }, []);
-
-//   const handleManualScan = useCallback(() => {
-//     if (manualTicket.trim()) {
-//       handleScan(manualTicket.trim());
-//       setManualTicket("");
-//       setShowManualInput(false);
-//     }
-//   }, [manualTicket, handleScan]);
-
-//   const handleKeyPress = useCallback(
-//     (e: React.KeyboardEvent<HTMLInputElement>) => {
-//       if (e.key === "Enter") handleManualScan();
-//     },
-//     [handleManualScan]
-//   );
-
-//   const toggleManualInput = useCallback(() => {
-//     setShowManualInput(!showManualInput);
-//     if (showManualInput) setManualTicket("");
-//   }, [showManualInput]);
-
-//   const cancelManualInput = useCallback(() => {
-//     setShowManualInput(false);
-//     setManualTicket("");
-//   }, []);
-
-//   if (!isClient) return <p>Chargement...</p>;
-
-//   return (
-//     <div className="max-w-2xl mx-auto space-y-6">
-//       <div className="text-center mb-8">
-//         <h1 className="text-3xl font-bold text-gray-900 mb-2">
-//           Scan d&apos;Entrée
-//         </h1>
-//         <p className="text-gray-600">
-//           Scannez les billets pour valider l&apos;accès à l&apos;événement
-//         </p>
-//       </div>
-
-//       <Card className="festival-card">
-//         <CardContent className="p-0">
-//           <div ref={scanAreaRef} className="relative aspect-square bg-gray-900 rounded-t-xl overflow-hidden">
-//             <div className="absolute inset-0 flex items-center justify-center">
-//               {scanResult ? (
-//                 <div className="text-center">
-//                   {scanResult === "success" ? (
-//                     <>
-//                       <CheckCircle className="w-24 h-24 text-green-500 mx-auto mb-4" />
-//                       <p className="text-green-400 text-2xl font-bold mb-2">ACCÈS AUTORISÉ</p>
-//                       <p className="text-white text-lg">Billet: {scannedTicket}</p>
-//                     </>
-//                   ) : scanResult === "already-used" ? (
-//                     <>
-//                       <XCircle className="w-24 h-24 text-orange-500 mx-auto mb-4" />
-//                       <p className="text-orange-400 text-2xl font-bold mb-2">BILLET DÉJÀ UTILISÉ</p>
-//                       <p className="text-white text-lg">Billet: {scannedTicket}</p>
-//                     </>
-//                   ) : (
-//                     <>
-//                       <XCircle className="w-24 h-24 text-red-500 mx-auto mb-4" />
-//                       <p className="text-red-400 text-2xl font-bold mb-2">ACCÈS REFUSÉ</p>
-//                       <p className="text-white text-lg">Billet invalide: {scannedTicket}</p>
-//                     </>
-//                   )}
-//                 </div>
-//               ) : (
-//                 <div id="qr-reader" className="w-full h-full" />
-//               )}
-//             </div>
-//           </div>
-
-//           <div className="p-6 space-y-4">
-//             {!isScanning && !scanResult && (
-//               <>
-//                 <Button onClick={startCamera} className="w-full h-14 text-lg festival-button-success">
-//                   <Camera className="w-6 h-6 mr-3" />
-//                   Démarrer le scan
-//                 </Button>
-
-//                 <div className="text-center">
-//                   <p className="text-gray-500 mb-2">ou</p>
-//                   <Button onClick={toggleManualInput} variant="outline" className="w-full h-12">
-//                     <Type className="w-5 h-5 mr-2" />
-//                     Saisie manuelle
-//                   </Button>
-//                 </div>
-//               </>
-//             )}
-
-//             {showManualInput && (
-//               <div className="space-y-3 pt-4 border-t border-gray-200">
-//                 <Input
-//                   placeholder="Numéro de billet (ex: TK1234)"
-//                   value={manualTicket}
-//                   onChange={(e) => setManualTicket(e.target.value)}
-//                   className="h-12 text-base text-center font-mono"
-//                   onKeyDown={handleKeyPress}
-//                   autoFocus
-//                 />
-//                 <div className="grid grid-cols-2 gap-3">
-//                   <Button onClick={cancelManualInput} variant="outline" className="h-12">
-//                     Annuler
-//                   </Button>
-//                   <Button onClick={handleManualScan} disabled={!manualTicket.trim()} className="h-12 festival-button">
-//                     Valider
-//                   </Button>
-//                 </div>
-//               </div>
-//             )}
-//           </div>
-//         </CardContent>
-//       </Card>
-//     </div>
-//   );
-// }

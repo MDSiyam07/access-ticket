@@ -64,7 +64,6 @@ export default function RootLayout({
         suppressHydrationWarning={true}
       >
         <ErrorBoundary>
-          <ServiceWorkerRegistration />
           <AuthProvider>
             <Navbar>{children}</Navbar>
             <Toaster 
@@ -77,8 +76,9 @@ export default function RootLayout({
                 },
               }}
             />
-            <PWAInstallPrompt />
           </AuthProvider>
+          <ServiceWorkerRegistration />
+          <PWAInstallPrompt />
         </ErrorBoundary>
       </body>
     </html>

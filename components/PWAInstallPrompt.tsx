@@ -11,43 +11,48 @@ export default function PWAInstallPrompt() {
   const [isStandalone, setIsStandalone] = useState(false);
 
   useEffect(() => {
-    // Detect iOS
-    const userAgent = navigator.userAgent || navigator.vendor;
-    const isIOSDevice = /ipad|iphone|ipod/.test(userAgent.toLowerCase());
-    setIsIOS(isIOSDevice);
+    // Délai pour éviter les conflits de chargement
+    const timer = setTimeout(() => {
+      // Detect iOS
+      const userAgent = navigator.userAgent || navigator.vendor;
+      const isIOSDevice = /ipad|iphone|ipod/.test(userAgent.toLowerCase());
+      setIsIOS(isIOSDevice);
 
-    // Detect if app is already installed
-    const isStandaloneMode = window.matchMedia('(display-mode: standalone)').matches || 
-                           (window.navigator as Navigator & { standalone?: boolean }).standalone === true;
-    setIsStandalone(isStandaloneMode);
+      // Detect if app is already installed
+      const isStandaloneMode = window.matchMedia('(display-mode: standalone)').matches || 
+                             (window.navigator as Navigator & { standalone?: boolean }).standalone === true;
+      setIsStandalone(isStandaloneMode);
 
-    // Listen for beforeinstallprompt event (Android/Chrome)
-    const handleBeforeInstallPrompt = (e: Event) => {
-      e.preventDefault();
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      setDeferredPrompt(e as any);
-      setShowInstallPrompt(true);
-    };
+      // Listen for beforeinstallprompt event (Android/Chrome)
+      const handleBeforeInstallPrompt = (e: Event) => {
+        e.preventDefault();
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        setDeferredPrompt(e as any);
+        setShowInstallPrompt(true);
+      };
 
-    // Listen for appinstalled event
-    const handleAppInstalled = () => {
-      setShowInstallPrompt(false);
-      setDeferredPrompt(null);
-      setIsStandalone(true);
-    };
+      // Listen for appinstalled event
+      const handleAppInstalled = () => {
+        setShowInstallPrompt(false);
+        setDeferredPrompt(null);
+        setIsStandalone(true);
+      };
 
-    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-    window.addEventListener('appinstalled', handleAppInstalled);
+      window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      window.addEventListener('appinstalled', handleAppInstalled);
 
-    // Show iOS install prompt if not in standalone mode
-    if (isIOSDevice && !isStandaloneMode) {
-      setShowInstallPrompt(true);
-    }
+      // Show iOS install prompt if not in standalone mode
+      if (isIOSDevice && !isStandaloneMode) {
+        setShowInstallPrompt(true);
+      }
 
-    return () => {
-      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-      window.removeEventListener('appinstalled', handleAppInstalled);
-    };
+      return () => {
+        window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+        window.removeEventListener('appinstalled', handleAppInstalled);
+      };
+    }, 2000);
+
+    return () => clearTimeout(timer);
   }, []);
 
   const handleInstallClick = async () => {
