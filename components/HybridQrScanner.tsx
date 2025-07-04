@@ -31,14 +31,13 @@ export default function HybridQrScanner({
   const [isMobile, setIsMobile] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
   const [backCameraId, setBackCameraId] = useState<string | null>(null);
-  const [userRequestedStart, setUserRequestedStart] = useState(false);
   
   // Refs pour éviter les boucles infinies
   const abortControllerRef = useRef<AbortController | null>(null);
   const initTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isCleaningUpRef = useRef(false);
   const renderCountRef = useRef(0);
-  const isInitializingRef = useRef(false); // Nouveau ref pour éviter les états conflictuels
+  const isInitializingRef = useRef(false);
 
   // DEBUG: Compter les renders
   renderCountRef.current += 1;
@@ -46,7 +45,6 @@ export default function HybridQrScanner({
     isScanning,
     isInitializing,
     isInitialized,
-    userRequestedStart,
     error: !!error,
     isCleaningUp: isCleaningUpRef.current
   });
@@ -140,7 +138,6 @@ export default function HybridQrScanner({
     onScanSuccess(decodedText);
     
     // Arrêter le scanner après succès
-    setUserRequestedStart(false);
     onStopScan();
   }, [onScanSuccess, onStopScan]);
 
@@ -321,33 +318,30 @@ export default function HybridQrScanner({
     setIsInitialized(false);
     setIsInitializing(false);
     setError(null);
-    setUserRequestedStart(false);
     isInitializingRef.current = false;
     onStopScan();
 
     console.log('✅ Scanner arrêté');
   }, [cleanupScanner, onStopScan]);
 
-  // Gérer changement état scan - EFFET PRINCIPAL
+  // Gérer changement état scan - EFFET PRINCIPAL SIMPLIFIÉ
   useEffect(() => {
     console.log('🔄 useEffect SCAN triggered:', {
       isScanning,
-      userRequestedStart,
       isInitializing,
       isInitialized,
       isCleaningUp: isCleaningUpRef.current
     });
 
-    if (isScanning && userRequestedStart && !isInitializingRef.current && !isInitialized && !isCleaningUpRef.current) {
-      console.log('🔄 Démarrage du scanner demandé par l\'utilisateur');
+    if (isScanning && !isInitializingRef.current && !isInitialized && !isCleaningUpRef.current) {
+      console.log('🔄 Démarrage du scanner demandé');
       initializeScanner();
     } else if (!isScanning && (isInitialized || isInitializingRef.current)) {
       console.log('🔄 Arrêt du scanner');
       stopScanner();
-    } else {
-      console.log('🔄 Aucune action nécessaire');
     }
-  }, [isScanning, userRequestedStart, isInitialized, isInitializing, initializeScanner, stopScanner]); // Dépendances minimales et stables
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isScanning, isInitialized, initializeScanner, stopScanner]);
 
   // Nettoyage au démontage
   useEffect(() => {
@@ -363,7 +357,6 @@ export default function HybridQrScanner({
     
     if (!isScanning && !isInitializingRef.current && !isCleaningUpRef.current) {
       console.log('▶️ Démarrage du scan demandé par l\'utilisateur...');
-      setUserRequestedStart(true);
       onStartScan();
     } else {
       console.log('⏸️ Scan déjà en cours ou en cours d\'initialisation');
@@ -372,14 +365,12 @@ export default function HybridQrScanner({
 
   const handleStopScan = useCallback(() => {
     console.log('⏹️ Arrêt du scan depuis le bouton');
-    setUserRequestedStart(false);
     onStopScan();
   }, [onStopScan]);
 
   const handleRetry = useCallback(async () => {
     console.log('🔄 Tentative de redémarrage...');
     setError(null);
-    setUserRequestedStart(false);
     
     await stopScanner();
     // Attendre un peu avant de permettre le redémarrage
