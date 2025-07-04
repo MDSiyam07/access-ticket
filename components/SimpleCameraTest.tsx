@@ -159,10 +159,11 @@ export default function SimpleCameraTest({
   useEffect(() => {
     if (isScanning && !isInitializing && !hasStarted) {
       startCamera();
-    } else if (!isScanning && hasStarted) {
+    } else if ((!isScanning || error) && hasStarted) {
       stopCamera();
     }
-  }, [isScanning, isInitializing, hasStarted, startCamera, stopCamera]);
+  }, [isScanning, isInitializing, hasStarted, error, startCamera, stopCamera]);
+  
 
   // Nettoyage
   useEffect(() => {

@@ -101,7 +101,7 @@ export default function ScanEntry() {
 
   const handleQRScanSuccess = useCallback((decodedText: string) => {
     console.log('QR Code scanned:', decodedText);
-    // Arrêter le scanner avant de traiter le résultat
+    toast.success(`QR Code scanné: ${decodedText}`, { duration: 3000 });
     setIsScanning(false);
     handleScan(decodedText);
   }, [handleScan]);
