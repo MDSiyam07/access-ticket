@@ -115,8 +115,12 @@ export default function ScanEntry() {
 
   const startCamera = useCallback(() => {
     console.log('Démarrage du scanner...');
-    setIsScanning(true);
-  }, []);
+    if (!isScanning) {
+      setIsScanning(true);
+    } else {
+      console.log('Scanner déjà en cours');
+    }
+  }, [isScanning]);
 
   const stopCamera = useCallback(() => {
     console.log('Arrêt du scanner...');
