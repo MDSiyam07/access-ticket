@@ -10,12 +10,12 @@ interface QRScannerProps {
   className?: string;
 }
 
-const QRScanner: React.FC<QRScannerProps> = ({
+export default function QRScanner({
   onScanSuccess,
   onScanError,
   isScanning,
   className = "",
-}) => {
+}: QRScannerProps) {
   const scannerRef = useRef<Html5QrcodeScanner | null>(null);
   const containerId = "html5qr-code-full-region";
   const [hasScanned, setHasScanned] = useState(false);
@@ -51,6 +51,4 @@ const QRScanner: React.FC<QRScannerProps> = ({
   }, [isScanning, onScanSuccess, onScanError, hasScanned]);
 
   return <div id={containerId} className={className} />;
-};
-
-export default QRScanner;
+}

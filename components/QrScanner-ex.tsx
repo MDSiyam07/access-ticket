@@ -3,7 +3,7 @@
 import { Html5Qrcode } from 'html5-qrcode';
 import { useEffect, useRef, useState } from 'react';
 
-const QrScanner = ({ onScan }: { onScan: (result: string) => void }) => {
+const QrScannerEx = ({ onScan }: { onScan: (result: string) => void }) => {
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const cameraIdRef = useRef<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -67,4 +67,4 @@ const QrScanner = ({ onScan }: { onScan: (result: string) => void }) => {
   );
 };
 
-export default QrScanner;
+export default QrScannerEx;
