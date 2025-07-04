@@ -51,5 +51,55 @@
     "Cross Platform",
     "fast",
     "simple"
+  ],
+  "shortcuts": [
+    {
+      "name": "Scan Entry",
+      "short_name": "Entry",
+      "description": "Scanner les billets d'entrée",
+      "url": "/scan-entry",
+      "icons": [
+        {
+          "src": "/icon-192x192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Scan Exit",
+      "short_name": "Exit",
+      "description": "Scanner les billets de sortie",
+      "url": "/scan-exit",
+      "icons": [
+        {
+          "src": "/icon-192x192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Manual Entry",
+      "short_name": "Manual",
+      "description": "Saisie manuelle de billets",
+      "url": "/manual-entry",
+      "icons": [
+        {
+          "src": "/icon-192x192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "History",
+      "short_name": "History",
+      "description": "Historique des scans",
+      "url": "/history",
+      "icons": [
+        {
+          "src": "/icon-192x192.png",
+          "sizes": "192x192"
+        }
+      ]
+    }
   ]
 } 
