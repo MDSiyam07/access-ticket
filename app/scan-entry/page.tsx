@@ -219,6 +219,10 @@ export default function ScanEntry() {
               ) : (
                 <HybridQrScanner
                   onScanSuccess={handleQRScanSuccess}
+                  onScanError={handleQRScanError}
+                  isScanning={isScanning}
+                  onStartScan={startCamera}
+                  onStopScan={stopCamera}
                 />
               )}
             </div>
