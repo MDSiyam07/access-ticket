@@ -53,9 +53,18 @@ export default function SimpleCameraTest({
 
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
-        await videoRef.current.play();
-        console.log('Caméra activée avec succès');
-      }
+        try {
+          await videoRef.current.play();
+          console.log('Caméra activée avec succès');
+        } catch (playError) {
+          console.error('Erreur lors du démarrage de la vidéo:', playError);
+          toast.error('Erreur lors du démarrage de la caméra (lecture vidéo)');
+          setError('Impossible de démarrer la caméra.');
+          if (onScanError) onScanError('Impossible de lire la caméra');
+          setIsInitializing(false);
+          return;
+        }
+    }      
 
       setIsInitializing(false);
       setHasStarted(true);
