@@ -5,6 +5,7 @@ import { Toaster } from 'react-hot-toast';
 import Navbar from "@/components/Navbar";
 import { AuthProvider } from "@/app/contexts/AuthContext";
 import PWAInstallPrompt from "@/components/PWAInstallPrompt";
+import ServiceWorkerRegistration from "@/components/ServiceWorkerRegistration";
 import ErrorBoundary from "@/components/ErrorBoundary";
 
 const geistSans = Geist({
@@ -76,6 +77,7 @@ export default function RootLayout({
               }}
             />
           </AuthProvider>
+          <ServiceWorkerRegistration />
           <PWAInstallPrompt />
         </ErrorBoundary>
       </body>

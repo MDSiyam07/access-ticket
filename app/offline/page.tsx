@@ -49,7 +49,7 @@ export default function OfflinePage() {
               Actualiser la page
             </Button>
             <Button onClick={handleGoHome} variant="outline" className="w-full">
-              Retour à l'accueil
+              Retour à l&apos;accueil
             </Button>
           </CardContent>
         </Card>
@@ -66,7 +66,7 @@ export default function OfflinePage() {
           </div>
           <CardTitle className="text-xl">Hors ligne</CardTitle>
           <CardDescription>
-            Vous n'avez pas de connexion internet. Certaines fonctionnalités peuvent ne pas être disponibles.
+            Vous n&apos;avez pas de connexion internet. Certaines fonctionnalités peuvent ne pas être disponibles.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -81,7 +81,7 @@ export default function OfflinePage() {
           </Button>
           <Button onClick={handleGoHome} variant="outline" className="w-full">
             <Home className="h-4 w-4 mr-2" />
-            Retour à l'accueil
+            Retour à l&apos;accueil
           </Button>
         </CardContent>
       </Card>
