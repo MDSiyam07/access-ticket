@@ -33,12 +33,25 @@ export default function HybridQrScanner({
   const [backCameraId, setBackCameraId] = useState<string | null>(null);
   const [userRequestedStart, setUserRequestedStart] = useState(false);
   
-  // Ajout pour gérer les AbortError
+  // Refs pour éviter les boucles infinies
   const abortControllerRef = useRef<AbortController | null>(null);
   const initTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isCleaningUpRef = useRef(false);
+  const renderCountRef = useRef(0);
+  const isInitializingRef = useRef(false); // Nouveau ref pour éviter les états conflictuels
 
-  // Detect device type
+  // DEBUG: Compter les renders
+  renderCountRef.current += 1;
+  console.log('🔄 RENDER #' + renderCountRef.current, {
+    isScanning,
+    isInitializing,
+    isInitialized,
+    userRequestedStart,
+    error: !!error,
+    isCleaningUp: isCleaningUpRef.current
+  });
+
+  // Detect device type - STABLE (pas de dépendances changeantes)
   useEffect(() => {
     const userAgent = navigator.userAgent || navigator.vendor;
     const isMobileDevice = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(userAgent.toLowerCase());
@@ -47,7 +60,7 @@ export default function HybridQrScanner({
     setIsIOS(isIOSDevice);
   }, []);
 
-  // Récupérer deviceId caméra arrière
+  // Récupérer deviceId caméra arrière - STABLE
   useEffect(() => {
     async function getBackCameraId() {
       try {
@@ -63,7 +76,7 @@ export default function HybridQrScanner({
     getBackCameraId();
   }, []);
 
-  // Fonction de nettoyage améliorée
+  // Fonction de nettoyage - STABLE (pas de dépendances externes)
   const cleanupScanner = useCallback(async (force: boolean = false) => {
     if (isCleaningUpRef.current && !force) {
       console.log('Nettoyage déjà en cours...');
@@ -71,6 +84,7 @@ export default function HybridQrScanner({
     }
 
     isCleaningUpRef.current = true;
+    isInitializingRef.current = false;
     console.log('🧹 Début du nettoyage du scanner...');
 
     try {
@@ -117,20 +131,37 @@ export default function HybridQrScanner({
     } finally {
       isCleaningUpRef.current = false;
     }
+  }, []); // Pas de dépendances externes
+
+  // Créer des handlers stables pour éviter les re-créations
+  const handleScanSuccess = useCallback((decodedText: string) => {
+    console.log('✅ QR Code détecté :', decodedText);
+    toast.success(`QR détecté : ${decodedText}`, { duration: 3000 });
+    onScanSuccess(decodedText);
+    
+    // Arrêter le scanner après succès
+    setUserRequestedStart(false);
+    onStopScan();
+  }, [onScanSuccess, onStopScan]);
+
+  const handleScanError = useCallback((errorMessage: string) => {
+    // Erreurs mineures ignorées
+    console.warn('Scan error:', errorMessage);
   }, []);
 
-  // Initialiser le scanner avec gestion d'AbortError améliorée
+  // Initialiser le scanner - STABLE
   const initializeScanner = useCallback(async () => {
-    if (isInitializing || isInitialized || isCleaningUpRef.current) {
+    if (isInitializingRef.current || isInitialized || isCleaningUpRef.current) {
       console.log('Scanner déjà en cours d\'initialisation ou déjà initialisé');
       return;
     }
 
     console.log('🚀 Démarrage du scanner HTML5-QRCode...');
+    isInitializingRef.current = true;
     setIsInitializing(true);
     setError(null);
 
-    // Créer un nouveau AbortController pour cette opération
+    // Créer un nouveau AbortController
     abortControllerRef.current = new AbortController();
     const { signal } = abortControllerRef.current;
 
@@ -158,22 +189,21 @@ export default function HybridQrScanner({
         throw new Error('Opération annulée après l\'attente');
       }
 
-      // Créer un ID unique pour éviter les conflits
-      const uniqueId = `qr-reader-${Date.now()}`;
-      
-      // Préparer l'élément DOM
-      const existingElement = document.getElementById("qr-reader");
-      if (existingElement) {
-        existingElement.innerHTML = '';
-        existingElement.id = uniqueId;
+      // Vérifier que l'élément DOM existe
+      const qrReaderElement = document.getElementById("qr-reader");
+      if (!qrReaderElement) {
+        throw new Error('Élément DOM qr-reader introuvable');
       }
+
+      // Nettoyer l'élément DOM
+      qrReaderElement.innerHTML = '';
 
       if (signal.aborted) {
         throw new Error('Opération annulée pendant la préparation DOM');
       }
 
       // Créer l'instance HTML5-QRCode
-      html5QrCodeRef.current = new Html5Qrcode(uniqueId);
+      html5QrCodeRef.current = new Html5Qrcode("qr-reader");
       
       const config = {
         fps: isMobile ? 5 : 10,
@@ -200,21 +230,12 @@ export default function HybridQrScanner({
         throw new Error('Opération annulée avant le démarrage de la caméra');
       }
 
-      // Démarrer le scanner avec un timeout
+      // Démarrer le scanner avec timeout
       const startPromise = html5QrCodeRef.current.start(
         cameraConfig,
         config,
-        (decodedText: string) => {
-          console.log('✅ QR Code détecté :', decodedText);
-          toast.success(`QR détecté : ${decodedText}`, { duration: 3000 });
-          onScanSuccess(decodedText);
-          stopScanner();
-        },
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        (errorMessage: string) => {
-          // Erreurs mineures ignorées (ne pas logger pour éviter le spam)
-          // console.warn('Scan error:', errorMessage);
-        }
+        handleScanSuccess,
+        handleScanError
       );
 
       // Timeout pour éviter les blocages
@@ -223,7 +244,7 @@ export default function HybridQrScanner({
           if (!signal.aborted) {
             reject(new Error('Timeout lors de l\'initialisation du scanner'));
           }
-        }, 10000); // 10 secondes
+        }, 10000);
       });
 
       await Promise.race([startPromise, timeoutPromise]);
@@ -234,25 +255,23 @@ export default function HybridQrScanner({
 
       setIsInitialized(true);
       setIsInitializing(false);
+      isInitializingRef.current = false;
       console.log('✅ Scanner initialisé avec succès');
 
     } catch (error: unknown) {
       console.error('❌ Erreur lors de l\'initialisation du scanner:', error);
       setIsInitializing(false);
+      isInitializingRef.current = false;
       
       let errorMessage = 'Erreur lors de l\'initialisation du scanner';
       
       if (error instanceof Error) {
         console.log('📝 Type d\'erreur détecté:', error.name);
         console.log('📝 Message d\'erreur:', error.message);
-        console.log('📝 Stack trace:', error.stack);
 
         if (error.name === 'AbortError' || error.message.includes('annulée')) {
           errorMessage = 'Opération annulée. Veuillez réessayer.';
           console.warn('⚠️ AbortError détecté - opération annulée');
-          
-          // Ne pas afficher d'erreur à l'utilisateur pour les AbortError
-          // car c'est souvent intentionnel
           setError(null);
           return;
         } else if (error.name === 'NotAllowedError') {
@@ -285,10 +304,9 @@ export default function HybridQrScanner({
       // Nettoyer après une erreur
       await cleanupScanner(true);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isInitializing, isInitialized, isMobile, backCameraId, onScanSuccess, cleanupScanner, onScanError]);
+  }, [isMobile, backCameraId, handleScanSuccess, handleScanError, onScanError, cleanupScanner, isInitialized]);
 
-  // Arrêter le scanner
+  // Arrêter le scanner - STABLE
   const stopScanner = useCallback(async () => {
     console.log('🛑 Arrêt du scanner demandé...');
     
@@ -304,21 +322,32 @@ export default function HybridQrScanner({
     setIsInitializing(false);
     setError(null);
     setUserRequestedStart(false);
+    isInitializingRef.current = false;
     onStopScan();
 
     console.log('✅ Scanner arrêté');
   }, [cleanupScanner, onStopScan]);
 
-  // Gérer changement état scan - UNIQUEMENT si l'utilisateur a demandé le démarrage
+  // Gérer changement état scan - EFFET PRINCIPAL
   useEffect(() => {
-    if (isScanning && userRequestedStart && !isInitializing && !isInitialized && !isCleaningUpRef.current) {
+    console.log('🔄 useEffect SCAN triggered:', {
+      isScanning,
+      userRequestedStart,
+      isInitializing,
+      isInitialized,
+      isCleaningUp: isCleaningUpRef.current
+    });
+
+    if (isScanning && userRequestedStart && !isInitializingRef.current && !isInitialized && !isCleaningUpRef.current) {
       console.log('🔄 Démarrage du scanner demandé par l\'utilisateur');
       initializeScanner();
-    } else if (!isScanning && (isInitialized || isInitializing)) {
+    } else if (!isScanning && (isInitialized || isInitializingRef.current)) {
       console.log('🔄 Arrêt du scanner');
       stopScanner();
+    } else {
+      console.log('🔄 Aucune action nécessaire');
     }
-  }, [isScanning, userRequestedStart, isInitializing, isInitialized, initializeScanner, stopScanner]);
+  }, [isScanning, userRequestedStart, isInitialized, isInitializing, initializeScanner, stopScanner]); // Dépendances minimales et stables
 
   // Nettoyage au démontage
   useEffect(() => {
@@ -328,24 +357,26 @@ export default function HybridQrScanner({
     };
   }, [cleanupScanner]);
 
-  const handleStartScan = () => {
+  // Handlers pour les boutons - STABLES
+  const handleStartScan = useCallback(() => {
     console.log('🔘 Bouton démarrer cliqué');
-    if (!isScanning && !isInitializing && !isCleaningUpRef.current) {
+    
+    if (!isScanning && !isInitializingRef.current && !isCleaningUpRef.current) {
       console.log('▶️ Démarrage du scan demandé par l\'utilisateur...');
       setUserRequestedStart(true);
       onStartScan();
     } else {
       console.log('⏸️ Scan déjà en cours ou en cours d\'initialisation');
     }
-  };
+  }, [isScanning, onStartScan]);
 
-  const handleStopScan = () => {
+  const handleStopScan = useCallback(() => {
     console.log('⏹️ Arrêt du scan depuis le bouton');
     setUserRequestedStart(false);
     onStopScan();
-  };
+  }, [onStopScan]);
 
-  const handleRetry = async () => {
+  const handleRetry = useCallback(async () => {
     console.log('🔄 Tentative de redémarrage...');
     setError(null);
     setUserRequestedStart(false);
@@ -355,15 +386,15 @@ export default function HybridQrScanner({
     setTimeout(() => {
       console.log('🔄 Prêt pour un nouveau démarrage...');
     }, 1000);
-  };
+  }, [stopScanner]);
 
-  const handleTestScan = () => {
+  const handleTestScan = useCallback(() => {
     if (isInitialized) {
       const testQRCode = 'TEST-' + Math.random().toString(36).substr(2, 6).toUpperCase();
       console.log('🧪 Test QR Code:', testQRCode);
-      onScanSuccess(testQRCode);
+      handleScanSuccess(testQRCode);
     }
-  };
+  }, [isInitialized, handleScanSuccess]);
 
   return (
     <div className={`relative ${className}`}>

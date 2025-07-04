@@ -15,15 +15,19 @@ import HybridQrScanner from '@/components/HybridQrScanner';
 type ScanResult = 'success' | 'already-used' | 'invalid' | null;
 
 export default function ScanEntry() {
-  const [isScanning, setIsScanning] = useState(true);
+  // États principaux
+  const [isScanning, setIsScanning] = useState(false); // Commencer par false
   const [scanResult, setScanResult] = useState<ScanResult>(null);
   const [scannedTicket, setScannedTicket] = useState('');
   const [manualTicket, setManualTicket] = useState('');
   const [showManualInput, setShowManualInput] = useState(false);
   const [isClient, setIsClient] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  
+  // Refs
   const scanAreaRef = useRef<HTMLDivElement>(null);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const processingRef = useRef(false); // Pour éviter les doubles traitements
 
   // Ensure we're on the client side
   useEffect(() => {
@@ -42,6 +46,7 @@ export default function ScanEntry() {
     };
   }, []);
 
+  // Fonction de simulation stable (pas de dépendances)
   const simulateTicketScan = useCallback((ticketId: string): ScanResult => {
     console.log('Scanning ticket:', ticketId);
     
@@ -56,26 +61,39 @@ export default function ScanEntry() {
     }
   }, []);
 
+  // Reset stable
   const resetScanResult = useCallback(() => {
+    console.log('🔄 Reset scan result');
     setScanResult(null);
     setScannedTicket('');
+    processingRef.current = false;
   }, []);
 
+  // Fonction principale de traitement - STABLE
   const handleScan = useCallback((ticketId: string) => {
-    console.log('Traitement du billet:', ticketId);
+    console.log('🎫 Traitement du billet:', ticketId);
     
-    // Éviter les scans multiples
-    if (scanResult || isScanning) {
-      console.log('Scan déjà en cours ou résultat déjà affiché');
+    // Éviter les traitements multiples
+    if (processingRef.current) {
+      console.log('⚠️ Traitement déjà en cours, ignoré');
       return;
     }
     
+    processingRef.current = true;
     setScannedTicket(ticketId);
     
+    // Arrêter le scanner immédiatement
+    setIsScanning(false);
+    
+    // Nettoyer les timeouts précédents
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
+    
+    // Simuler le traitement
     timeoutRef.current = setTimeout(() => {
       const result = simulateTicketScan(ticketId);
       setScanResult(result);
-      setIsScanning(false);
 
       // Show toast notifications
       if (result === 'success') {
@@ -83,16 +101,17 @@ export default function ScanEntry() {
       } else if (result === 'already-used') {
         toast.error(`Le billet ${ticketId} a déjà été scanné`);
       } else {
-        toast.error(`Le billet ${ticketId} n&apos;est pas valide`);
+        toast.error(`Le billet ${ticketId} n'est pas valide`);
       }
 
-      // Reset after 3 seconds
+      // Reset après 3 secondes
       timeoutRef.current = setTimeout(() => {
         resetScanResult();
       }, 3000);
     }, 1000);
-  }, [simulateTicketScan, resetScanResult, scanResult, isScanning]);
+  }, [simulateTicketScan, resetScanResult]); // Dépendances stables uniquement
 
+  // Handlers pour l'input manuel - STABLES
   const handleManualScan = useCallback(() => {
     if (manualTicket.trim()) {
       handleScan(manualTicket.trim());
@@ -100,32 +119,6 @@ export default function ScanEntry() {
       setShowManualInput(false);
     }
   }, [manualTicket, handleScan]);
-
-  const handleQRScanSuccess = useCallback((decodedText: string) => {
-    console.log('QR Code scanned:', decodedText);
-    toast.success(`QR Code scanné: ${decodedText}`, { duration: 3000 });
-    setIsScanning(false);
-    handleScan(decodedText);
-  }, [handleScan]);
-
-  const handleQRScanError = useCallback((error: string) => {
-    console.error('QR Scan error:', error);
-    toast.error('Erreur lors du scan du QR code');
-  }, []);
-
-  const startCamera = useCallback(() => {
-    console.log('Démarrage du scanner...');
-    if (!isScanning) {
-      setIsScanning(true);
-    } else {
-      console.log('Scanner déjà en cours');
-    }
-  }, [isScanning]);
-
-  const stopCamera = useCallback(() => {
-    console.log('Arrêt du scanner...');
-    setIsScanning(false);
-  }, []);
 
   const handleKeyPress = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
@@ -145,6 +138,32 @@ export default function ScanEntry() {
     setManualTicket('');
   }, []);
 
+  // Handlers pour le scanner QR - SIMPLIFIÉS
+  const handleQRScanSuccess = useCallback((decodedText: string) => {
+    console.log('📱 QR Code scanné:', decodedText);
+    handleScan(decodedText);
+  }, [handleScan]);
+
+  const handleQRScanError = useCallback((error: string) => {
+    console.error('❌ QR Scan error:', error);
+    toast.error('Erreur lors du scan du QR code');
+  }, []);
+
+  // Handlers pour contrôler le scanner - SIMPLIFIÉS
+  const startCamera = useCallback(() => {
+    console.log('📷 Démarrage du scanner...');
+    if (!processingRef.current && !scanResult) {
+      setIsScanning(true);
+    } else {
+      console.log('⚠️ Scanner bloqué - traitement en cours ou résultat affiché');
+    }
+  }, [scanResult]);
+
+  const stopCamera = useCallback(() => {
+    console.log('🛑 Arrêt du scanner...');
+    setIsScanning(false);
+  }, []);
+
   // Don't render until we're on the client side
   if (!isClient || isLoading) {
     return (
@@ -158,12 +177,6 @@ export default function ScanEntry() {
       </div>
     );
   }
-
-  // Error handling for mobile compatibility
-  const handleError = (error: Error) => {
-    console.error('Scan entry error:', error);
-    toast.error('Une erreur est survenue. Veuillez réessayer.');
-  };
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
@@ -242,6 +255,7 @@ export default function ScanEntry() {
                     onClick={toggleManualInput}
                     variant="outline"
                     className="w-full h-12"
+                    disabled={processingRef.current}
                   >
                     <Type className="w-5 h-5 mr-2" />
                     Saisie manuelle
@@ -260,21 +274,23 @@ export default function ScanEntry() {
                   className="h-12 text-base text-center font-mono"
                   onKeyDown={handleKeyPress}
                   autoFocus
+                  disabled={processingRef.current}
                 />
                 <div className="grid grid-cols-2 gap-3">
                   <Button
                     onClick={cancelManualInput}
                     variant="outline"
                     className="h-12"
+                    disabled={processingRef.current}
                   >
                     Annuler
                   </Button>
                   <Button
                     onClick={handleManualScan}
-                    disabled={!manualTicket.trim()}
+                    disabled={!manualTicket.trim() || processingRef.current}
                     className="h-12 festival-button"
                   >
-                    Valider
+                    {processingRef.current ? 'Traitement...' : 'Valider'}
                   </Button>
                 </div>
               </div>
