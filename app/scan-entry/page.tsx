@@ -9,7 +9,8 @@ import { Camera, CheckCircle, XCircle, Type } from 'lucide-react';
 import toast from 'react-hot-toast';
 // import SimpleCameraTest from '@/components/SimpleCameraTest';
 import LoadingSpinner from '@/components/LoadingSpinner';
-import QrScanner from '@/components/QrScanner';
+// import QrScanner from '@/components/QrScanner';
+import HybridQrScanner from '@/components/HybridQrScanner';
 
 type ScanResult = 'success' | 'already-used' | 'invalid' | null;
 
@@ -216,11 +217,8 @@ export default function ScanEntry() {
                   )}
                 </div>
               ) : (
-                <QrScanner
+                <HybridQrScanner
                   onScanSuccess={handleQRScanSuccess}
-                  onScanError={handleQRScanError}
-                  isScanning={isScanning}
-                  className="w-full h-full"
                 />
               )}
             </div>
