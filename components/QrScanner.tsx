@@ -1,70 +1,56 @@
 'use client';
 
-import { Html5Qrcode } from 'html5-qrcode';
-import { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from "react";
+import { Html5QrcodeScanner } from "html5-qrcode";
 
-const QrScanner = ({ onScan }: { onScan: (result: string) => void }) => {
-  const scannerRef = useRef<Html5Qrcode | null>(null);
-  const cameraIdRef = useRef<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+interface QRScannerProps {
+  onScanSuccess: (decodedText: string) => void;
+  onScanError?: (error: string) => void;
+  isScanning: boolean;
+  className?: string;
+}
+
+const QRScanner: React.FC<QRScannerProps> = ({
+  onScanSuccess,
+  onScanError,
+  isScanning,
+  className = "",
+}) => {
+  const scannerRef = useRef<Html5QrcodeScanner | null>(null);
+  const containerId = "html5qr-code-full-region";
+  const [hasScanned, setHasScanned] = useState(false);
 
   useEffect(() => {
-    const initScanner = async () => {
-      try {
-        const devices = await navigator.mediaDevices.enumerateDevices();
-        const videoDevices = devices.filter((d) => d.kind === 'videoinput');
+    if (!isScanning || hasScanned) return;
 
-        // Essaye de trouver la caméra arrière (device label contient "back" ou "rear")
-        const backCamera = videoDevices.find((d) =>
-          /back|rear/i.test(d.label)
-        ) || videoDevices[0]; // fallback : première caméra
-
-        if (!backCamera) {
-          setError('Aucune caméra disponible.');
-          return;
-        }
-
-        cameraIdRef.current = backCamera.deviceId;
-        const scanner = new Html5Qrcode('qr-reader');
-        scannerRef.current = scanner;
-
-        await scanner.start(
-          { deviceId: { exact: backCamera.deviceId } },
-          {
-            fps: 10,
-            qrbox: { width: 250, height: 250 },
-            aspectRatio: 1,
-          },
-          (decodedText) => {
-            onScan(decodedText);
-            scanner.stop();
-          },
-          (err) => {
-            console.error(err);
-          }
-        );
-      } catch (err) {
-        setError('Erreur lors de l’accès à la caméra.');
-        console.error(err);
-      }
+    const config = {
+      fps: 10,
+      qrbox: { width: 250, height: 250 },
     };
 
-    initScanner();
+    const scanner = new Html5QrcodeScanner(containerId, config, false);
+
+    scannerRef.current = scanner;
+
+    scanner.render(
+      (decodedText) => {
+        if (!hasScanned) {
+          setHasScanned(true);
+          onScanSuccess(decodedText);
+          scanner.clear(); // arrête le scanner après un scan
+        }
+      },
+      (errorMessage) => {
+        onScanError?.(errorMessage);
+      }
+    );
 
     return () => {
-      scannerRef.current?.stop().catch(() => {});
+      scanner.clear().catch(() => {});
     };
-  }, [onScan]);
+  }, [isScanning, onScanSuccess, onScanError, hasScanned]);
 
-  return (
-    <div>
-      {error ? (
-        <p style={{ color: 'red' }}>{error}</p>
-      ) : (
-        <div id="qr-reader" style={{ width: '100%', maxWidth: 400 }} />
-      )}
-    </div>
-  );
+  return <div id={containerId} className={className} />;
 };
 
-export default QrScanner;
+export default QRScanner;
