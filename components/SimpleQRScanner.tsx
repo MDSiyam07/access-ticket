@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
-import { Html5QrcodeScanner, Html5QrcodeScanType } from 'html5-qrcode';
+import { useEffect, useRef, useState, useCallback } from 'react';
+import { Html5QrcodeScanner } from 'html5-qrcode';
 
 interface SimpleQRScannerProps {
   onScanSuccess: (decodedText: string) => void;
@@ -13,44 +13,51 @@ const SimpleQRScanner: React.FC<SimpleQRScannerProps> = ({
   onScanError,
 }) => {
   const scannerRef = useRef<Html5QrcodeScanner | null>(null);
-  const [scannedText, setScannedText] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const scannerId = 'hybrid-qr-scanner';
+
+  // Memoize callbacks pour éviter qu'ils changent à chaque render
+  const memoizedOnScanSuccess = useCallback((decodedText: string) => {
+    onScanSuccess(decodedText);
+  }, [onScanSuccess]);
+
+  const memoizedOnScanError = useCallback((error: string) => {
+    if (onScanError) onScanError(error);
+    console.log("Erreur de scan :", error);
+  }, [onScanError]);
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      setErrorMessage("L'accès à la caméra est non supporté.");
+      return;
+    }
 
     const config = {
       fps: 10,
       qrbox: { width: 250, height: 250 },
       rememberLastUsedCamera: true,
-      supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA],
+      aspectRatio: 1.0,
     };
 
-    const scanner = new Html5QrcodeScanner('qr-reader', config, false);
-    scannerRef.current = scanner;
+    scannerRef.current = new Html5QrcodeScanner(scannerId, config, false);
 
-    scanner.render(
-      (decodedText) => {
-        setScannedText(decodedText);
-        onScanSuccess(decodedText);
-      },
-      (error) => {
-        console.warn('QR Scan Error:', error);
-        onScanError?.(error);
-      }
+    scannerRef.current.render(
+      memoizedOnScanSuccess,
+      memoizedOnScanError
     );
 
     return () => {
-      scanner.clear().catch((err) => console.error('Clear scanner error:', err));
+      scannerRef.current?.clear().catch((err) => {
+        console.warn("Erreur lors de l'arrêt du scanner :", err);
+      });
     };
-  }, [onScanSuccess, onScanError]);
+  }, [memoizedOnScanSuccess, memoizedOnScanError]);
 
   return (
     <div>
-      <div id="qr-reader" style={{ width: '100%' }} />
-      {scannedText && (
-        <div className="mt-2 text-green-600 font-mono text-sm">
-          ✅ Code scanné : {scannedText}
-        </div>
+      <div id={scannerId} />
+      {errorMessage && (
+        <p className="text-red-500 mt-2 text-sm">{errorMessage}</p>
       )}
     </div>
   );
