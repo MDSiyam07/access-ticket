@@ -67,13 +67,17 @@ export default function HybridQrScanner({
     setError(null);
 
     try {
+      // Créer un ID unique pour éviter les conflits
+      const uniqueId = `qr-reader-${Date.now()}`;
+      
       // Vérifier si l'élément existe déjà
       const existingElement = document.getElementById("qr-reader");
       if (existingElement) {
         existingElement.innerHTML = '';
+        existingElement.id = uniqueId;
       }
 
-      html5QrCodeRef.current = new Html5Qrcode("qr-reader");
+      html5QrCodeRef.current = new Html5Qrcode(uniqueId);
       
       const config = {
         fps: isMobile ? 5 : 10,
@@ -274,7 +278,7 @@ export default function HybridQrScanner({
           )}
 
           <div className="relative aspect-square bg-gray-900 rounded-t-xl overflow-hidden">
-            <div id="qr-reader" style={{ width: '100%', height: '100%' }} />
+            <div id="qr-reader" style={{ width: '100%', height: '100%', position: 'relative' }} />
           </div>
 
           <p className="text-sm text-gray-600 mt-2 text-center">

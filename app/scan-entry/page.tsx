@@ -15,7 +15,7 @@ import HybridQrScanner from '@/components/HybridQrScanner';
 type ScanResult = 'success' | 'already-used' | 'invalid' | null;
 
 export default function ScanEntry() {
-  const [isScanning, setIsScanning] = useState(false);
+  const [isScanning, setIsScanning] = useState(true);
   const [scanResult, setScanResult] = useState<ScanResult>(null);
   const [scannedTicket, setScannedTicket] = useState('');
   const [manualTicket, setManualTicket] = useState('');
@@ -230,16 +230,8 @@ export default function ScanEntry() {
 
           {/* Controls */}
           <div className="p-6 space-y-4">
-            {!isScanning && !scanResult && (
+            {!scanResult && (
               <>
-                <Button
-                  onClick={startCamera}
-                  className="w-full h-14 text-lg festival-button-success"
-                >
-                  <Camera className="w-6 h-6 mr-3" />
-                  Démarrer le scan
-                </Button>
-
                 <div className="text-center">
                   <p className="text-gray-500 mb-2">ou</p>
                   <Button
