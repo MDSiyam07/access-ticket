@@ -12,21 +12,21 @@
   "categories": ["business", "productivity"],
   "icons": [
     {
-      "src": "/icon-192x192.png",
+      "src": "/icon-192x192.svg",
       "sizes": "192x192",
-      "type": "image/png",
+      "type": "image/svg+xml",
       "purpose": "any maskable"
     },
     {
-      "src": "/icon-512x512.png",
+      "src": "/icon-512x512.svg",
       "sizes": "512x512",
-      "type": "image/png",
+      "type": "image/svg+xml",
       "purpose": "any maskable"
     },
     {
-      "src": "/apple-touch-icon.png",
+      "src": "/apple-touch-icon.svg",
       "sizes": "180x180",
-      "type": "image/png"
+      "type": "image/svg+xml"
     }
   ],
   "screenshots": [
@@ -43,15 +43,6 @@
       "form_factor": "narrow"
     }
   ],
-  "permissions": [
-    "camera",
-    "geolocation"
-  ],
-  "features": [
-    "Cross Platform",
-    "fast",
-    "simple"
-  ],
   "shortcuts": [
     {
       "name": "Scan Entry",
@@ -60,7 +51,7 @@
       "url": "/scan-entry",
       "icons": [
         {
-          "src": "/icon-192x192.png",
+          "src": "/icon-192x192.svg",
           "sizes": "192x192"
         }
       ]
@@ -72,7 +63,7 @@
       "url": "/scan-exit",
       "icons": [
         {
-          "src": "/icon-192x192.png",
+          "src": "/icon-192x192.svg",
           "sizes": "192x192"
         }
       ]
@@ -84,7 +75,7 @@
       "url": "/manual-entry",
       "icons": [
         {
-          "src": "/icon-192x192.png",
+          "src": "/icon-192x192.svg",
           "sizes": "192x192"
         }
       ]
@@ -96,10 +87,10 @@
       "url": "/history",
       "icons": [
         {
-          "src": "/icon-192x192.png",
+          "src": "/icon-192x192.svg",
           "sizes": "192x192"
         }
       ]
     }
   ]
-} 
+}
