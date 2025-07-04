@@ -26,13 +26,12 @@ export default function HybridQrScanner({
 }: HybridQrScannerProps) {
   const html5QrCodeRef = useRef<Html5Qrcode | null>(null);
   const [isInitializing, setIsInitializing] = useState(false);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [isInitialized, setIsInitialized] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isMobile, setIsMobile] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
   const [backCameraId, setBackCameraId] = useState<string | null>(null);
-  const [hasStarted, setHasStarted] = useState(false);
+  const [userRequestedStart, setUserRequestedStart] = useState(false);
   
   // Ajout pour gérer les AbortError
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -122,8 +121,8 @@ export default function HybridQrScanner({
 
   // Initialiser le scanner avec gestion d'AbortError améliorée
   const initializeScanner = useCallback(async () => {
-    if (isInitializing || hasStarted || isCleaningUpRef.current) {
-      console.log('Scanner déjà en cours d\'initialisation ou déjà démarré');
+    if (isInitializing || isInitialized || isCleaningUpRef.current) {
+      console.log('Scanner déjà en cours d\'initialisation ou déjà initialisé');
       return;
     }
 
@@ -235,9 +234,6 @@ export default function HybridQrScanner({
 
       setIsInitialized(true);
       setIsInitializing(false);
-      setHasStarted(true);
-      onStartScan();
-
       console.log('✅ Scanner initialisé avec succès');
 
     } catch (error: unknown) {
@@ -290,7 +286,7 @@ export default function HybridQrScanner({
       await cleanupScanner(true);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isInitializing, hasStarted, isMobile, backCameraId, onScanSuccess, onStartScan, onScanError, cleanupScanner]);
+  }, [isInitializing, isInitialized, isMobile, backCameraId, onScanSuccess, cleanupScanner, onScanError]);
 
   // Arrêter le scanner
   const stopScanner = useCallback(async () => {
@@ -307,26 +303,22 @@ export default function HybridQrScanner({
     setIsInitialized(false);
     setIsInitializing(false);
     setError(null);
-    setHasStarted(false);
+    setUserRequestedStart(false);
     onStopScan();
 
     console.log('✅ Scanner arrêté');
   }, [cleanupScanner, onStopScan]);
 
-  // Gérer changement état scan avec debounce
+  // Gérer changement état scan - UNIQUEMENT si l'utilisateur a demandé le démarrage
   useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      if (isScanning && !isInitializing && !hasStarted && !isCleaningUpRef.current) {
-        console.log('🔄 Déclenchement de l\'initialisation du scanner (avec debounce)');
-        initializeScanner();
-      } else if ((!isScanning || error) && hasStarted) {
-        console.log('🔄 Arrêt du scanner (avec debounce)');
-        stopScanner();
-      }
-    }, 100); // Debounce de 100ms
-
-    return () => clearTimeout(timeoutId);
-  }, [isScanning, isInitializing, hasStarted, error, initializeScanner, stopScanner]);
+    if (isScanning && userRequestedStart && !isInitializing && !isInitialized && !isCleaningUpRef.current) {
+      console.log('🔄 Démarrage du scanner demandé par l\'utilisateur');
+      initializeScanner();
+    } else if (!isScanning && (isInitialized || isInitializing)) {
+      console.log('🔄 Arrêt du scanner');
+      stopScanner();
+    }
+  }, [isScanning, userRequestedStart, isInitializing, isInitialized, initializeScanner, stopScanner]);
 
   // Nettoyage au démontage
   useEffect(() => {
@@ -337,9 +329,10 @@ export default function HybridQrScanner({
   }, [cleanupScanner]);
 
   const handleStartScan = () => {
-    console.log('🔘 Bouton démarrer cliqué, isScanning:', isScanning);
+    console.log('🔘 Bouton démarrer cliqué');
     if (!isScanning && !isInitializing && !isCleaningUpRef.current) {
-      console.log('▶️ Démarrage du scan...');
+      console.log('▶️ Démarrage du scan demandé par l\'utilisateur...');
+      setUserRequestedStart(true);
       onStartScan();
     } else {
       console.log('⏸️ Scan déjà en cours ou en cours d\'initialisation');
@@ -347,31 +340,25 @@ export default function HybridQrScanner({
   };
 
   const handleStopScan = () => {
-    if (isScanning) {
-      console.log('⏹️ Arrêt du scan depuis le bouton');
-      onStopScan();
-    }
+    console.log('⏹️ Arrêt du scan depuis le bouton');
+    setUserRequestedStart(false);
+    onStopScan();
   };
 
   const handleRetry = async () => {
     console.log('🔄 Tentative de redémarrage...');
     setError(null);
-    setHasStarted(false);
+    setUserRequestedStart(false);
     
-    if (isScanning) {
-      await stopScanner();
-      // Attendre un peu avant de redémarrer
-      setTimeout(() => {
-        console.log('🔄 Redémarrage après retry...');
-        onStartScan();
-      }, 1000);
-    } else {
-      onStartScan();
-    }
+    await stopScanner();
+    // Attendre un peu avant de permettre le redémarrage
+    setTimeout(() => {
+      console.log('🔄 Prêt pour un nouveau démarrage...');
+    }, 1000);
   };
 
   const handleTestScan = () => {
-    if (hasStarted) {
+    if (isInitialized) {
       const testQRCode = 'TEST-' + Math.random().toString(36).substr(2, 6).toUpperCase();
       console.log('🧪 Test QR Code:', testQRCode);
       onScanSuccess(testQRCode);
@@ -442,21 +429,23 @@ export default function HybridQrScanner({
 
           <p className="text-sm text-gray-600 mt-2 text-center">
             {isInitializing
-              ? 'Initialisation...'
-              : hasStarted
-                ? 'Scanner actif - Cliquez "Test Scan" pour simuler'
+              ? 'Initialisation de la caméra...'
+              : isInitialized
+                ? 'Scanner actif - Pointez vers un QR code'
                 : 'Prêt à démarrer'
             }
           </p>
 
-          {!isInitializing && !error && hasStarted && (
+          {!isInitializing && !error && (
             <div className="space-y-2 mt-4">
-              <Button
-                onClick={handleTestScan}
-                className="w-full"
-              >
-                Test Scan (Simulation)
-              </Button>
+              {isInitialized && (
+                <Button
+                  onClick={handleTestScan}
+                  className="w-full"
+                >
+                  Test Scan (Simulation)
+                </Button>
+              )}
               <Button
                 onClick={handleStopScan}
                 variant="outline"
