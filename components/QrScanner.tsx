@@ -10,7 +10,7 @@ interface QRScannerProps {
   className?: string;
 }
 
-export default function QRScanner({
+export default function QrScanner({
   onScanSuccess,
   onScanError,
   isScanning,
