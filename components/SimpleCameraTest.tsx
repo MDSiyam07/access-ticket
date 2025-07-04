@@ -1,9 +1,10 @@
 'use client';
 
 import React, { useEffect, useRef, useState, useCallback } from 'react';
+import jsQR from "jsqr";
 import { Button } from '@/components/ui/button';
 import { Camera, AlertCircle, RefreshCw } from 'lucide-react';
-import toast from 'react-hot-toast';
+// import toast from 'react-hot-toast';
 import LoadingSpinner from './LoadingSpinner';
 
 interface SimpleCameraTestProps {
@@ -24,24 +25,60 @@ export default function SimpleCameraTest({
   className = ""
 }: SimpleCameraTestProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const animationFrameRef = useRef<number | null>(null);
   const [isInitializing, setIsInitializing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasStarted, setHasStarted] = useState(false);
 
+  // Fonction pour scanner une frame vidéo
+  const scanFrame = useCallback(() => {
+    if (!videoRef.current || !canvasRef.current) {
+      animationFrameRef.current = requestAnimationFrame(scanFrame);
+      return;
+    }
+
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext("2d");
+
+    if (!ctx) {
+      animationFrameRef.current = requestAnimationFrame(scanFrame);
+      return;
+    }
+
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+    const code = jsQR(imageData.data, canvas.width, canvas.height);
+
+    if (code && code.data) {
+      onScanSuccess(code.data);
+      // On peut arrêter le scan si besoin
+      // stopCamera();
+      return;
+    }
+
+    animationFrameRef.current = requestAnimationFrame(scanFrame);
+  }, [onScanSuccess]);
+
   // Démarrer la caméra
   const startCamera = useCallback(async () => {
     if (isInitializing || hasStarted) return;
-    
+
     console.log('Démarrage de la caméra...');
     setIsInitializing(true);
     setError(null);
 
     try {
-      // Demander l'accès à la caméra
       const constraints = {
         video: {
-          facingMode: 'environment', // Caméra arrière
+          facingMode: 'environment',
           width: { ideal: 1280 },
           height: { ideal: 720 }
         }
@@ -58,13 +95,12 @@ export default function SimpleCameraTest({
           console.log('Caméra activée avec succès');
         } catch (playError) {
           console.error('Erreur lors du démarrage de la vidéo:', playError);
-          toast.error('Erreur lors du démarrage de la caméra (lecture vidéo)');
           setError('Impossible de démarrer la caméra.');
           if (onScanError) onScanError('Impossible de lire la caméra');
           setIsInitializing(false);
           return;
         }
-    }      
+      }
 
       setIsInitializing(false);
       setHasStarted(true);
@@ -73,25 +109,21 @@ export default function SimpleCameraTest({
     } catch (err) {
       console.error('Erreur d\'accès à la caméra:', err);
       setIsInitializing(false);
-      
+
       let errorMessage = 'Erreur lors de l\'accès à la caméra';
-      
+
       if (err instanceof Error) {
         if (err.name === 'NotAllowedError') {
           errorMessage = 'Accès à la caméra refusé. Veuillez autoriser l\'accès dans les paramètres.';
-          toast.error('Accès à la caméra refusé');
         } else if (err.name === 'NotFoundError') {
           errorMessage = 'Aucune caméra trouvée sur cet appareil.';
-          toast.error('Aucune caméra trouvée');
         } else if (err.name === 'NotSupportedError') {
           errorMessage = 'Votre navigateur ne supporte pas l\'accès à la caméra.';
-          toast.error('Navigateur non supporté');
         } else {
           errorMessage = `Erreur: ${err.message}`;
-          toast.error(`Erreur: ${err.message}`);
         }
       }
-      
+
       setError(errorMessage);
       if (onScanError) {
         onScanError(errorMessage);
@@ -102,7 +134,12 @@ export default function SimpleCameraTest({
   // Arrêter la caméra
   const stopCamera = useCallback(() => {
     console.log('Arrêt de la caméra...');
-    
+
+    if (animationFrameRef.current) {
+      cancelAnimationFrame(animationFrameRef.current);
+      animationFrameRef.current = null;
+    }
+
     if (streamRef.current) {
       streamRef.current.getTracks().forEach(track => track.stop());
       streamRef.current = null;
@@ -118,7 +155,7 @@ export default function SimpleCameraTest({
     onStopScan();
   }, [onStopScan]);
 
-  // Gérer le changement d'état de scan
+  // Gérer changement état scan
   useEffect(() => {
     if (isScanning && !isInitializing && !hasStarted) {
       startCamera();
@@ -170,6 +207,7 @@ export default function SimpleCameraTest({
       {!isScanning ? (
         <div className="text-center">
           <div className="w-32 h-32 border-4 border-gray-300 border-opacity-30 rounded-lg mb-4 mx-auto flex items-center justify-center">
+            {/* Icône caméra */}
             <Camera className="w-16 h-16 text-gray-400" />
           </div>
           <p className="text-gray-600 mb-4">
@@ -224,7 +262,9 @@ export default function SimpleCameraTest({
               muted
               autoPlay
             />
-            
+            {/* Canvas caché pour scan QR */}
+            <canvas ref={canvasRef} style={{ display: "none" }} />
+
             {/* Zone de scan */}
             {!isInitializing && !error && hasStarted && (
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
@@ -237,11 +277,11 @@ export default function SimpleCameraTest({
               </div>
             )}
           </div>
-          
+
           <p className="text-sm text-gray-600 mt-2 text-center">
-            {isInitializing 
-              ? 'Initialisation...' 
-              : hasStarted 
+            {isInitializing
+              ? 'Initialisation...'
+              : hasStarted
                 ? 'Caméra active - Cliquez "Test Scan" pour simuler'
                 : 'Prêt à démarrer'
             }
@@ -268,4 +308,4 @@ export default function SimpleCameraTest({
       )}
     </div>
   );
-} 
+}
