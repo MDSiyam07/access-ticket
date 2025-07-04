@@ -10,12 +10,12 @@ import toast from 'react-hot-toast';
 // import SimpleCameraTest from '@/components/SimpleCameraTest';
 import LoadingSpinner from '@/components/LoadingSpinner';
 // import QrScanner from '@/components/QrScanner';
-import HybridQrScanner from '@/components/HybridQrScanner';
+// import HybridQrScanner from '@/components/HybridQrScanner';
+import SimpleQRScanner from '@/components/SimpleQRScanner';
 
 type ScanResult = 'success' | 'already-used' | 'invalid' | null;
 
 export default function ScanEntry() {
-  // États principaux
   const [isScanning, setIsScanning] = useState(false); // Commencer par false
   const [scanResult, setScanResult] = useState<ScanResult>(null);
   const [scannedTicket, setScannedTicket] = useState('');
@@ -234,13 +234,17 @@ export default function ScanEntry() {
                   )}
                 </div>
               ) : (
-                <HybridQrScanner
-                  onScanSuccess={handleQRScanSuccess}
-                  onScanError={handleQRScanError}
-                  isScanning={isScanning}
-                  onStartScan={startCamera}
-                  onStopScan={stopCamera}
-                />
+                // <HybridQrScanner
+                //   onScanSuccess={handleQRScanSuccess}
+                //   onScanError={handleQRScanError}
+                //   isScanning={isScanning}
+                //   onStartScan={startCamera}
+                //   onStopScan={stopCamera}
+                  // />
+                  <SimpleQRScanner
+                    onScanSuccess={handleQRScanSuccess}
+                    onScanError={handleQRScanError}
+                  />
               )}
             </div>
           </div>

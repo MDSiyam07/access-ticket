@@ -6,7 +6,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Camera, CheckCircle, XCircle, Type } from 'lucide-react';
 import toast from 'react-hot-toast';
-import SimpleQRScanner from '@/components/SimpleQRScanner';
+import HybridQrScanner from '@/components/HybridQrScanner';
 
 type ScanResult = 'success' | 'not-inside' | 'invalid' | null;
 
@@ -166,13 +166,13 @@ export default function ScanExit() {
                   )}
                 </div>
               ) : (
-                <SimpleQRScanner
+                <HybridQrScanner
                   onScanSuccess={handleQRScanSuccess}
                   onScanError={handleQRScanError}
                   isScanning={isScanning}
                   onStartScan={startCamera}
                   onStopScan={stopCamera}
-                  title="Scanner de Sortie"
+                  // title="Scanner de Sortie"
                   className="w-full h-full"
                 />
               )}
