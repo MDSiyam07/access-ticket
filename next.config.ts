@@ -68,15 +68,15 @@ const nextConfig: NextConfig = {
             key: 'Referrer-Policy',
             value: 'origin-when-cross-origin',
           },
-          // Permissions critiques pour PWA
+          // Permissions critiques pour PWA - syntaxe corrigée
           {
             key: 'Permissions-Policy',
-            value: 'camera=self, microphone=self, geolocation=self',
+            value: 'camera=(self), microphone=(self), geolocation=(self)',
           },
-          // Content Security Policy pour PWA
+          // Content Security Policy pour PWA - beaucoup plus permissif pour la caméra
           {
             key: 'Content-Security-Policy',
-            value: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob:; camera 'self';",
+            value: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; media-src 'self' blob: data: https:; connect-src 'self' https: wss: ws:; font-src 'self' https:; worker-src 'self' blob:;",
           },
         ],
       },
@@ -93,17 +93,31 @@ const pwaOptions: PWAPluginOptions = {
     urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
     handler: 'CacheFirst',
     options: {
-        cacheName: 'google-fonts-cache',
-        expiration: {
-          maxEntries: 10,
-          maxAgeSeconds: 60 * 60 * 24 * 365, // 1 year
-        },
-        cacheableResponse: {
-          statuses: [0, 200],
-        },
+      cacheName: 'google-fonts-cache',
+      expiration: {
+        maxEntries: 10,
+        maxAgeSeconds: 60 * 60 * 24 * 365, // 1 year
+      },
+      cacheableResponse: {
+        statuses: [0, 200],
       },
     },
-  ],
+  },
+  // Cache pour les ressources de caméra
+  {
+    urlPattern: /^blob:.*/i,
+    handler: 'NetworkOnly',
+    options: {
+      cacheName: 'camera-resources',
+      expiration: {
+        maxEntries: 50,
+        maxAgeSeconds: 60 * 60 * 24, // 1 day
+      },
+      cacheableResponse: {
+        statuses: [0, 200],
+      },
+    },
+  }],
   // Configuration du manifeste
   additionalManifestEntries: [
     {
@@ -118,5 +132,4 @@ const pwaOptions: PWAPluginOptions = {
 };
 
 const config = withPWA(pwaOptions)(nextConfig);
-
 export default config;
