@@ -46,16 +46,41 @@ export default function ScanEntry() {
     };
   }, []);
 
-  // Fonction de simulation stable
-  const simulateTicketScan = useCallback((ticketId: string): ScanResult => {
+  // Fonction de scan réelle avec l'API
+  const scanTicket = useCallback(async (ticketId: string): Promise<ScanResult> => {
     console.log('Scanning ticket:', ticketId);
     
-    const random = Math.random();
-    if (random < 0.7) {
+    try {
+      const response = await fetch('/api/tickets/scan', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ticketNumber: ticketId,
+          action: 'ENTER',
+          entryType: 'SCAN'
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        console.error('API Error:', error);
+        
+        if (error.message?.includes('déjà entré')) {
+          return 'already-used';
+        } else if (error.message?.includes('non trouvé')) {
+          return 'invalid';
+        } else {
+          return 'invalid';
+        }
+      }
+
+      const result = await response.json();
+      console.log('API Success:', result);
       return 'success';
-    } else if (random < 0.9) {
-      return 'already-used';
-    } else {
+    } catch (error) {
+      console.error('Network Error:', error);
       return 'invalid';
     }
   }, []);
@@ -69,7 +94,7 @@ export default function ScanEntry() {
   }, []);
 
   // Fonction principale de traitement
-  const handleScan = useCallback((ticketId: string) => {
+  const handleScan = useCallback(async (ticketId: string) => {
     console.log('🎫 Traitement du billet:', ticketId);
     
     if (processingRef.current) {
@@ -87,8 +112,8 @@ export default function ScanEntry() {
       clearTimeout(timeoutRef.current);
     }
     
-    timeoutRef.current = setTimeout(() => {
-      const result = simulateTicketScan(ticketId);
+    try {
+      const result = await scanTicket(ticketId);
       setScanResult(result);
 
       // Show toast notifications
@@ -104,8 +129,12 @@ export default function ScanEntry() {
       timeoutRef.current = setTimeout(() => {
         resetScanResult();
       }, 3000);
-    }, 1000);
-  }, [simulateTicketScan, resetScanResult]);
+    } catch (error) {
+      console.error('Erreur lors du scan:', error);
+      toast.error('Erreur lors du traitement du billet');
+      resetScanResult();
+    }
+  }, [scanTicket, resetScanResult]);
 
   // Handlers pour l'input manuel
   const handleManualScan = useCallback(() => {

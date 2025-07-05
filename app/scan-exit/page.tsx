@@ -42,16 +42,43 @@ export default function ScanExit() {
     };
   }, []);
 
-  const simulateExitScan = useCallback((ticketId: string): ScanResult => {
+  // Fonction de scan réelle avec l'API
+  const scanTicketExit = useCallback(async (ticketId: string): Promise<ScanResult> => {
     console.log('Scanning exit for ticket:', ticketId);
     
-    // Simulate different scenarios
-    const random = Math.random();
-    if (random < 0.8) {
+    try {
+      const response = await fetch('/api/tickets/scan', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ticketNumber: ticketId,
+          action: 'EXIT',
+          entryType: 'SCAN'
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        console.error('API Error:', error);
+        
+        if (error.message?.includes('pas encore été validé')) {
+          return 'not-inside';
+        } else if (error.message?.includes('non trouvé')) {
+          return 'invalid';
+        } else if (error.message?.includes('déjà sorti')) {
+          return 'not-inside';
+        } else {
+          return 'invalid';
+        }
+      }
+
+      const result = await response.json();
+      console.log('API Success:', result);
       return 'success';
-    } else if (random < 0.95) {
-      return 'not-inside';
-    } else {
+    } catch (error) {
+      console.error('Network Error:', error);
       return 'invalid';
     }
   }, []);
@@ -65,7 +92,7 @@ export default function ScanExit() {
   }, []);
 
   // Fonction principale de traitement
-  const handleScan = useCallback((ticketId: string) => {
+  const handleScan = useCallback(async (ticketId: string) => {
     console.log('🎫 Traitement du billet:', ticketId);
     
     if (processingRef.current) {
@@ -83,8 +110,8 @@ export default function ScanExit() {
       clearTimeout(timeoutRef.current);
     }
     
-    timeoutRef.current = setTimeout(() => {
-      const result = simulateExitScan(ticketId);
+    try {
+      const result = await scanTicketExit(ticketId);
       setScanResult(result);
 
       // Show toast notifications
@@ -121,8 +148,12 @@ export default function ScanExit() {
       timeoutRef.current = setTimeout(() => {
         resetScanResult();
       }, 3000);
-    }, 1000);
-  }, [simulateExitScan, resetScanResult]);
+    } catch (error) {
+      console.error('Erreur lors du scan:', error);
+      toast.error('Erreur lors du traitement du billet');
+      resetScanResult();
+    }
+  }, [scanTicketExit, resetScanResult]);
 
   const handleQRScanSuccess = useCallback((decodedText: string) => {
     console.log('QR Code scanned for exit:', decodedText);

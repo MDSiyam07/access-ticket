@@ -33,19 +33,33 @@ export default function ManualEntry() {
 
     setIsProcessing(true);
 
-    // Simulate processing
-    setTimeout(() => {
-      const random = Math.random();
-      const success = random > 0.2; // 80% success rate
+    try {
+      const response = await fetch('/api/tickets/scan', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ticketNumber: ticketId.trim(),
+          action: scanType === 'entry' ? 'ENTER' : 'EXIT',
+          entryType: 'MANUAL'
+        }),
+      });
 
       const result = {
         ticketId: ticketId.trim(),
         type: scanType === 'entry' ? 'Entrée' : 'Sortie',
-        status: success ? 'success' as const : 'error' as const,
-        message: success 
-          ? `${scanType === 'entry' ? 'Entrée' : 'Sortie'} validée avec succès`
-          : `Erreur lors de la validation ${scanType === 'entry' ? "de l'entrée" : 'de la sortie'}`
+        status: response.ok ? 'success' as const : 'error' as const,
+        message: ''
       };
+
+      if (response.ok) {
+        const data = await response.json();
+        result.message = data.message || `${scanType === 'entry' ? 'Entrée' : 'Sortie'} validée avec succès`;
+      } else {
+        const error = await response.json();
+        result.message = error.message || `Erreur lors de la validation ${scanType === 'entry' ? "de l'entrée" : 'de la sortie'}`;
+      }
 
       setLastResult(result);
       setIsProcessing(false);
@@ -71,7 +85,25 @@ export default function ManualEntry() {
           },
         });
       }
-    }, 1500);
+    } catch (error) {
+      console.error('Erreur lors de la validation:', error);
+      const result = {
+        ticketId: ticketId.trim(),
+        type: scanType === 'entry' ? 'Entrée' : 'Sortie',
+        status: 'error' as const,
+        message: 'Erreur de connexion au serveur'
+      };
+      setLastResult(result);
+      setIsProcessing(false);
+      toast.error('Erreur de connexion au serveur', {
+        duration: 4000,
+        icon: '❌',
+        style: {
+          background: '#ef4444',
+          color: 'white',
+        },
+      });
+    }
   };
 
   const quickFillTicket = (prefix: string) => {
