@@ -22,12 +22,21 @@ model User {
 }
 
 model Ticket {
-  id         String   @id @default(cuid())
-  number     String   @unique
-  status     Status   @default(PENDING)
-  scannedAt  DateTime?
-  entryType  EntryType?
-  createdAt  DateTime @default(now())
+  id          String        @id @default(cuid())
+  number      String        @unique
+  status      Status        @default(PENDING)
+  scannedAt   DateTime?
+  entryType   EntryType?
+  createdAt   DateTime      @default(now())
+  scanHistory ScanHistory[]
+}
+
+model ScanHistory {
+  id        String   @id @default(cuid())
+  ticket    Ticket   @relation(fields: [ticketId], references: [id])
+  ticketId  String
+  action    Action
+  scannedAt DateTime @default(now())
 }
 
 enum Status {
@@ -40,4 +49,9 @@ enum Status {
 enum EntryType {
   SCAN
   MANUAL
+}
+
+enum Action {
+  ENTER
+  EXIT
 }

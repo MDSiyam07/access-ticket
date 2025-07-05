@@ -25,7 +25,7 @@ export default function Login() {
       const success = await login(email, password);
       if (success) {
         toast.success("Connexion réussie - Bienvenue dans le système de contrôle d'accès !");
-        router.push('/');
+        router.push('/dashboard');
       } else {
         toast.error("Email ou mot de passe incorrect");
       }

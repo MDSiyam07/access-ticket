@@ -82,3 +82,33 @@
     @apply bg-background text-foreground;
   }
 }
+
+@layer components {
+    .festival-gradient {
+      background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
+    }
+    
+    .festival-card {
+      @apply bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md transition-shadow duration-200;
+    }
+    
+    .festival-button {
+      @apply bg-festival-blue hover:bg-festival-blue-dark text-white font-medium px-6 py-3 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-festival-blue focus:ring-offset-2;
+    }
+    
+    .festival-button-success {
+      @apply bg-festival-success hover:bg-green-600 text-white font-medium px-6 py-3 rounded-lg transition-colors duration-200;
+    }
+    
+    .festival-button-danger {
+      @apply bg-festival-danger hover:bg-red-700 text-white font-medium px-6 py-3 rounded-lg transition-colors duration-200;
+    }
+}
+
+.card {
+  padding: 2em;
+}
+
+.read-the-docs {
+  color: #888;
+}

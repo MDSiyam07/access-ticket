@@ -12,7 +12,8 @@ import {
   Edit3, 
   Menu, 
   X,
-  Users
+  Users,
+  Settings
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -56,11 +57,12 @@ export default function Navbar({ children }: NavbarProps) {
   }
 
   const navigation = [
-    { name: 'Dashboard', href: '/dashboard', icon: BarChart3 },
+    { name: 'Statistiques', href: '/dashboard', icon: BarChart3 },
     { name: 'Scan Entrée', href: '/scan-entry', icon: ScanLine },
     { name: 'Scan Sortie', href: '/scan-exit', icon: Users },
     { name: 'Historique', href: '/history', icon: History },
     { name: 'Saisie Manuelle', href: '/manual-entry', icon: Edit3 },
+    { name: 'Administration', href: '/admin', icon: Settings },
   ];
 
   const handleLogout = () => {

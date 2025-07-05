@@ -9,29 +9,66 @@ interface Stats {
   scannedIn: number;
   scannedOut: number;
   currentlyInside: number;
+  pending: number;
+}
+
+interface Activity {
+  id: string;
+  ticketNumber: string;
+  action: 'ENTER' | 'EXIT';
+  scannedAt: string;
+  timeAgo: string;
 }
 
 export default function Dashboard() {
   const [stats, setStats] = useState<Stats>({
-    totalTickets: 2500,
-    scannedIn: 1847,
-    scannedOut: 423,
-    currentlyInside: 1424
+    totalTickets: 0,
+    scannedIn: 0,
+    scannedOut: 0,
+    currentlyInside: 0,
+    pending: 0
   });
+  const [activity, setActivity] = useState<Activity[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // Simulate real-time updates
+  // Fetch real data from API
   useEffect(() => {
-    const interval = setInterval(() => {
-      setStats(prev => ({
-        ...prev,
-        scannedIn: prev.scannedIn + Math.floor(Math.random() * 3),
-        scannedOut: prev.scannedOut + Math.floor(Math.random() * 2),
-        currentlyInside: prev.scannedIn - prev.scannedOut
-      }));
-    }, 5000);
-
+    fetchStats();
+    
+    // Refresh data every 30 seconds
+    const interval = setInterval(fetchStats, 30000);
+    
     return () => clearInterval(interval);
   }, []);
+
+  const fetchStats = async () => {
+    try {
+      const [statsResponse, activityResponse] = await Promise.all([
+        fetch('/api/tickets/stats'),
+        fetch('/api/tickets/activity')
+      ]);
+
+      if (statsResponse.ok) {
+        const statsData = await statsResponse.json();
+        setStats({
+          totalTickets: statsData.total,
+          scannedIn: statsData.entered,
+          scannedOut: statsData.exited,
+          currentlyInside: statsData.entered - statsData.exited,
+          pending: statsData.pending
+        });
+      }
+
+      if (activityResponse.ok) {
+        const activityData = await activityResponse.json();
+        setActivity(activityData.activity || []);
+      }
+    } catch (error) {
+      console.error('Erreur lors du chargement des données:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const StatCard = ({ 
     title, 
@@ -62,12 +99,39 @@ export default function Dashboard() {
     </Card>
   );
 
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+            Statistiques Festival
+          </h1>
+          <p className="text-gray-600">
+            Chargement des données...
+          </p>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          {[...Array(4)].map((_, i) => (
+            <Card key={i} className="festival-card">
+              <CardContent className="p-6">
+                <div className="animate-pulse">
+                  <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
+                  <div className="h-8 bg-gray-200 rounded w-1/2"></div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">
-          Dashboard Festival
+          Statistiques Festival
         </h1>
         <p className="text-gray-600">
           Vue d&apos;ensemble en temps réel du contrôle d&apos;accès
@@ -75,13 +139,20 @@ export default function Dashboard() {
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
         <StatCard
-          title="Billets vendus"
+          title="Total Tickets"
           value={stats.totalTickets}
           icon={Users}
           color="bg-festival-blue"
-          description="Capacité totale"
+          description="Tickets importés"
+        />
+        <StatCard
+          title="En Attente"
+          value={stats.pending}
+          icon={Clock}
+          color="bg-yellow-500"
+          description="Tickets non utilisés"
         />
         <StatCard
           title="Entrées scannées"
@@ -117,27 +188,35 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
-                <div className="flex items-center">
-                  <div className="w-3 h-3 bg-green-500 rounded-full mr-3 animate-pulse"></div>
-                  <span className="text-sm font-medium">Entrée validée</span>
+              {activity.length > 0 ? (
+                activity.map((item) => (
+                  <div
+                    key={item.id}
+                    className={`flex items-center justify-between p-3 rounded-lg ${
+                      item.action === 'ENTER' ? 'bg-green-50' : 'bg-blue-50'
+                    }`}
+                  >
+                    <div className="flex items-center">
+                      <div
+                        className={`w-3 h-3 rounded-full mr-3 animate-pulse ${
+                          item.action === 'ENTER' ? 'bg-green-500' : 'bg-blue-500'
+                        }`}
+                      ></div>
+                      <span className="text-sm font-medium">
+                        {item.action === 'ENTER' ? 'Entrée validée' : 'Sortie validée'}
+                      </span>
+                      <span className="text-sm text-gray-500 ml-2">
+                        #{item.ticketNumber}
+                      </span>
+                    </div>
+                    <span className="text-sm text-gray-500">{item.timeAgo}</span>
+                  </div>
+                ))
+              ) : (
+                <div className="text-center text-gray-500 py-4">
+                  Aucune activité récente
                 </div>
-                <span className="text-sm text-gray-500">Il y a 2 min</span>
-              </div>
-              <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
-                <div className="flex items-center">
-                  <div className="w-3 h-3 bg-blue-500 rounded-full mr-3 animate-pulse"></div>
-                  <span className="text-sm font-medium">Sortie validée</span>
-                </div>
-                <span className="text-sm text-gray-500">Il y a 5 min</span>
-              </div>
-              <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
-                <div className="flex items-center">
-                  <div className="w-3 h-3 bg-green-500 rounded-full mr-3 animate-pulse"></div>
-                  <span className="text-sm font-medium">Entrée validée</span>
-                </div>
-                <span className="text-sm text-gray-500">Il y a 7 min</span>
-              </div>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -149,16 +228,16 @@ export default function Dashboard() {
           <CardContent>
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">Taux de scan</span>
+                <span className="text-sm text-gray-600">Taux d&apos;utilisation</span>
                 <span className="text-sm font-medium">
-                  {Math.round((stats.scannedIn / stats.totalTickets) * 100)}%
+                  {stats.totalTickets > 0 ? Math.round(((stats.scannedIn + stats.scannedOut) / stats.totalTickets) * 100) : 0}%
                 </span>
               </div>
               <div className="w-full bg-gray-200 rounded-full h-3">
                 <div 
                   className="bg-festival-blue h-3 rounded-full transition-all duration-500"
                   style={{ 
-                    width: `${Math.min((stats.scannedIn / stats.totalTickets) * 100, 100)}%` 
+                    width: `${stats.totalTickets > 0 ? Math.min(((stats.scannedIn + stats.scannedOut) / stats.totalTickets) * 100, 100) : 0}%` 
                   }}
                 ></div>
               </div>

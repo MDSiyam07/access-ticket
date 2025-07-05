@@ -1,12 +1,13 @@
 'use client';
 
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Camera, CheckCircle, XCircle, Type } from 'lucide-react';
+import { Camera, CheckCircle, XCircle, Type, Square } from 'lucide-react';
 import toast from 'react-hot-toast';
-import HybridQrScanner from '@/components/HybridQrScanner';
+import ControlledQRScanner from '@/components/ControlledQRScanner';
+import LoadingSpinner from '@/components/LoadingSpinner';
 
 type ScanResult = 'success' | 'not-inside' | 'invalid' | null;
 
@@ -16,7 +17,30 @@ export default function ScanExit() {
   const [scannedTicket, setScannedTicket] = useState('');
   const [manualTicket, setManualTicket] = useState('');
   const [showManualInput, setShowManualInput] = useState(false);
+  const [isClient, setIsClient] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [scannerReady, setScannerReady] = useState(false);
+  
+  // Refs
   const scanAreaRef = useRef<HTMLDivElement>(null);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const processingRef = useRef(false);
+
+  // Ensure we're on the client side
+  useEffect(() => {
+    setIsClient(true);
+    
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+    }, 1000);
+
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+      clearTimeout(timer);
+    };
+  }, []);
 
   const simulateExitScan = useCallback((ticketId: string): ScanResult => {
     console.log('Scanning exit for ticket:', ticketId);
@@ -32,15 +56,38 @@ export default function ScanExit() {
     }
   }, []);
 
+  // Reset stable
+  const resetScanResult = useCallback(() => {
+    console.log('🔄 Reset scan result');
+    setScanResult(null);
+    setScannedTicket('');
+    processingRef.current = false;
+  }, []);
+
+  // Fonction principale de traitement
   const handleScan = useCallback((ticketId: string) => {
-    setIsScanning(true);
+    console.log('🎫 Traitement du billet:', ticketId);
+    
+    if (processingRef.current) {
+      console.log('⚠️ Traitement déjà en cours, ignoré');
+      return;
+    }
+    
+    processingRef.current = true;
     setScannedTicket(ticketId);
     
-    setTimeout(() => {
+    // Arrêter le scanner immédiatement
+    setIsScanning(false);
+    
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
+    
+    timeoutRef.current = setTimeout(() => {
       const result = simulateExitScan(ticketId);
       setScanResult(result);
-      setIsScanning(false);
 
+      // Show toast notifications
       if (result === 'success') {
         toast.success(`Sortie validée - Billet ${ticketId}`, {
           duration: 4000,
@@ -70,13 +117,12 @@ export default function ScanExit() {
         });
       }
 
-      // Reset after 3 seconds
-      setTimeout(() => {
-        setScanResult(null);
-        setScannedTicket('');
+      // Reset après 3 secondes
+      timeoutRef.current = setTimeout(() => {
+        resetScanResult();
       }, 3000);
     }, 1000);
-  }, [simulateExitScan]);
+  }, [simulateExitScan, resetScanResult]);
 
   const handleQRScanSuccess = useCallback((decodedText: string) => {
     console.log('QR Code scanned for exit:', decodedText);
@@ -96,19 +142,59 @@ export default function ScanExit() {
     }
   }, [manualTicket, handleScan]);
 
-  const startCamera = useCallback(() => {
-    setIsScanning(true);
-  }, []);
 
-  const stopCamera = useCallback(() => {
-    setIsScanning(false);
-  }, []);
 
   const handleKeyPress = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
       handleManualScan();
     }
   }, [handleManualScan]);
+
+  // Handlers pour contrôler le scanner
+  const startCamera = useCallback(() => {
+    console.log('📷 Démarrage du scanner...');
+    if (!processingRef.current && !scanResult && scannerReady) {
+      setIsScanning(true);
+      setShowManualInput(false); // Fermer la saisie manuelle
+    } else {
+      console.log('⚠️ Scanner non disponible');
+      if (!scannerReady) {
+        toast.error('Scanner non prêt, veuillez patienter');
+      }
+    }
+  }, [scanResult, scannerReady]);
+
+  const stopCamera = useCallback(() => {
+    console.log('🛑 Arrêt du scanner...');
+    setIsScanning(false);
+  }, []);
+
+  // Callback quand le scanner est prêt
+  const handleScannerReady = useCallback(() => {
+    console.log('✅ Scanner prêt');
+    setScannerReady(true);
+  }, []);
+
+  // Callback pour les erreurs de scanner
+  const handleScannerError = useCallback((error: string) => {
+    console.error('❌ Erreur scanner:', error);
+    setScannerReady(false);
+    toast.error('Erreur du scanner: ' + error);
+  }, []);
+
+  // Don't render until we're on the client side
+  if (!isClient || isLoading) {
+    return (
+      <div className="max-w-2xl mx-auto space-y-6">
+        <div className="text-center mb-8">
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+            Scan de Sortie
+          </h1>
+          <LoadingSpinner size="lg" text="Initialisation..." />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
@@ -130,8 +216,8 @@ export default function ScanExit() {
             className="relative aspect-square bg-gray-900 rounded-t-xl overflow-hidden"
           >
             {/* QR Code Scanner or Result Display */}
-            <div className="absolute inset-0 bg-gradient-to-br from-gray-800 to-gray-900 flex items-center justify-center">
-              {scanResult ? (
+            {scanResult ? (
+              <div className="absolute inset-0 bg-gradient-to-br from-gray-800 to-gray-900 flex items-center justify-center">
                 <div className="text-center">
                   {scanResult === 'success' ? (
                     <div className="text-center">
@@ -165,31 +251,66 @@ export default function ScanExit() {
                     </div>
                   )}
                 </div>
-              ) : (
-                <HybridQrScanner
+              </div>
+            ) : (
+              <div className={`absolute inset-0 ${scanResult ? 'invisible' : 'visible'}`}>
+                <ControlledQRScanner
                   onScanSuccess={handleQRScanSuccess}
                   onScanError={handleQRScanError}
-                  isScanning={isScanning}
-                  onStartScan={startCamera}
-                  onStopScan={stopCamera}
-                  // title="Scanner de Sortie"
-                  className="w-full h-full"
+                  isActive={isScanning && !scanResult}
+                  onScannerReady={handleScannerReady}
+                  onScannerError={handleScannerError}
                 />
-              )}
-            </div>
+              </div>
+            )}
+
+            {/* Placeholder pendant l'initialisation */}
+            {!scannerReady && !scanResult && (
+              <div className="absolute inset-0 bg-gray-800 flex items-center justify-center">
+                <div className="text-center text-white">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white mx-auto mb-2"></div>
+                  <p className="text-sm">Initialisation du scanner...</p>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Controls */}
           <div className="p-6 space-y-4">
-            {!isScanning && !scanResult && (
+            {!scanResult && (
               <>
-                <Button
-                  onClick={startCamera}
-                  className="w-full h-14 text-lg bg-orange-500 hover:bg-orange-600 text-white"
-                >
-                  <Camera className="w-6 h-6 mr-3" />
-                  Scanner la sortie
-                </Button>
+                {/* Boutons de contrôle du scanner */}
+                <div className="flex gap-3">
+                  <Button
+                    onClick={startCamera}
+                    disabled={!scannerReady || processingRef.current || isScanning}
+                    className="flex-1 h-12 festival-button"
+                  >
+                    <Camera className="w-5 h-5 mr-2" />
+                    {isScanning ? 'Scanner actif' : 'Démarrer le scan'}
+                  </Button>
+                  
+                  {isScanning && (
+                    <Button
+                      onClick={stopCamera}
+                      variant="outline"
+                      className="h-12 px-6"
+                    >
+                      <Square className="w-5 h-5" />
+                    </Button>
+                  )}
+                </div>
+
+                {/* Indicateur d'état */}
+                <div className="text-center text-sm">
+                  {!scannerReady ? (
+                    <span className="text-orange-500">⚠️ Scanner en préparation...</span>
+                  ) : isScanning ? (
+                    <span className="text-green-500">🔍 Scanner actif - Pointez vers un QR code</span>
+                  ) : (
+                    <span className="text-gray-500">📱 Scanner prêt</span>
+                  )}
+                </div>
 
                 <div className="text-center">
                   <p className="text-gray-500 mb-2">ou</p>
@@ -197,6 +318,7 @@ export default function ScanExit() {
                     onClick={() => setShowManualInput(!showManualInput)}
                     variant="outline"
                     className="w-full h-12"
+                    disabled={processingRef.current || isScanning}
                   >
                     <Type className="w-5 h-5 mr-2" />
                     Saisie manuelle
