@@ -12,6 +12,8 @@ import LoadingSpinner from '@/components/LoadingSpinner';
 // import HybridQrScanner from '@/components/HybridQrScanner';
 // import SimpleQRScanner from '@/components/SimpleQRScanner';
 import ControlledQRScanner from '@/components/ControlledQRScanner';
+import QuickStats from '@/components/QuickStats';
+import { cn } from '@/lib/utils';
 
 type ScanResult = 'success' | 'already-used' | 'invalid' | null;
 
@@ -24,6 +26,7 @@ export default function ScanEntry() {
   const [isClient, setIsClient] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [scannerReady, setScannerReady] = useState(false);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
   
   // Refs
   const scanAreaRef = useRef<HTMLDivElement>(null);
@@ -119,6 +122,8 @@ export default function ScanEntry() {
       // Show toast notifications
       if (result === 'success') {
         toast.success(`Billet ${ticketId} validé avec succès`);
+        // Trigger stats refresh
+        setRefreshTrigger(prev => prev + 1);
       } else if (result === 'already-used') {
         toast.error(`Le billet ${ticketId} a déjà été scanné`);
       } else {
@@ -237,7 +242,7 @@ export default function ScanEntry() {
       </div>
 
       {/* Camera/Scan Area */}
-      <Card className="festival-card">
+      <Card className="festival-card !py-0">
         <CardContent className="p-0">
           <div 
             ref={scanAreaRef}
@@ -310,10 +315,16 @@ export default function ScanEntry() {
               <>
                 {/* Boutons de contrôle du scanner */}
                 <div className="flex gap-3">
-                  <Button
+                <Button
                     onClick={startCamera}
                     disabled={!scannerReady || processingRef.current || isScanning}
-                    className="flex-1 h-12 festival-button"
+                    className={cn(
+                      "flex-1 h-14 rounded-2xl text-white text-lg font-semibold shadow-md transition-all duration-200",
+                      isScanning
+                        ? "bg-green-600 cursor-default"
+                        : "bg-green-500 hover:bg-green-600 active:scale-[0.98]",
+                      (!scannerReady || processingRef.current || isScanning) && "opacity-50 cursor-not-allowed"
+                    )}
                   >
                     <Camera className="w-5 h-5 mr-2" />
                     {isScanning ? 'Scanner actif' : 'Démarrer le scan'}
@@ -323,7 +334,7 @@ export default function ScanEntry() {
                     <Button
                       onClick={stopCamera}
                       variant="outline"
-                      className="h-12 px-6"
+                      className="h-14 px-6 rounded-2xl text-sm"
                     >
                       <Square className="w-5 h-5" />
                     </Button>
@@ -346,7 +357,7 @@ export default function ScanEntry() {
                   <Button
                     onClick={toggleManualInput}
                     variant="outline"
-                    className="w-full h-12"
+                    className="w-full h-12 rounded-2xl"
                     disabled={processingRef.current || isScanning}
                   >
                     <Type className="w-5 h-5 mr-2" />
@@ -392,20 +403,7 @@ export default function ScanEntry() {
       </Card>
 
       {/* Quick stats */}
-      <div className="grid grid-cols-2 gap-4">
-        <Card className="festival-card">
-          <CardContent className="p-4 text-center">
-            <div className="text-2xl font-bold text-green-600">847</div>
-            <div className="text-sm text-gray-500">Entrées validées aujourd&apos;hui</div>
-          </CardContent>
-        </Card>
-        <Card className="festival-card">
-          <CardContent className="p-4 text-center">
-            <div className="text-2xl font-bold text-blue-600">1653</div>
-            <div className="text-sm text-gray-500">Billets restants</div>
-          </CardContent>
-        </Card>
-      </div>
+      <QuickStats type="entry" refreshTrigger={refreshTrigger} />
     </div>
   );
 }

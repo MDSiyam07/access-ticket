@@ -8,6 +8,8 @@ import { Camera, CheckCircle, XCircle, Type, Square } from 'lucide-react';
 import toast from 'react-hot-toast';
 import ControlledQRScanner from '@/components/ControlledQRScanner';
 import LoadingSpinner from '@/components/LoadingSpinner';
+import QuickStats from '@/components/QuickStats';
+import { cn } from '@/lib/utils';
 
 type ScanResult = 'success' | 'not-inside' | 'invalid' | null;
 
@@ -20,6 +22,7 @@ export default function ScanExit() {
   const [isClient, setIsClient] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [scannerReady, setScannerReady] = useState(false);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
   
   // Refs
   const scanAreaRef = useRef<HTMLDivElement>(null);
@@ -124,6 +127,9 @@ export default function ScanExit() {
             color: 'white',
           },
         });
+        // Trigger stats refresh
+        setRefreshTrigger(prev => prev + 1);
+
       } else if (result === 'not-inside') {
         toast.error(`Personne non présente - Billet ${ticketId}`, {
           duration: 4000,
@@ -240,7 +246,7 @@ export default function ScanExit() {
       </div>
 
       {/* Camera/Scan Area */}
-      <Card className="festival-card">
+      <Card className="festival-card !py-0">
         <CardContent className="p-0">
           <div 
             ref={scanAreaRef}
@@ -315,17 +321,23 @@ export default function ScanExit() {
                   <Button
                     onClick={startCamera}
                     disabled={!scannerReady || processingRef.current || isScanning}
-                    className="flex-1 h-12 festival-button"
+                    className={cn(
+                      "flex-1 h-14 rounded-2xl text-white text-lg font-semibold shadow-md transition-all duration-200",
+                      isScanning
+                        ? "bg-green-600 cursor-default"
+                        : "bg-green-500 hover:bg-green-600 active:scale-[0.98]",
+                      (!scannerReady || processingRef.current || isScanning) && "opacity-50 cursor-not-allowed"
+                    )}
                   >
-                    <Camera className="w-5 h-5 mr-2" />
+                    <Camera className="w-6 h-6 mr-2" />
                     {isScanning ? 'Scanner actif' : 'Démarrer le scan'}
                   </Button>
-                  
+
                   {isScanning && (
                     <Button
                       onClick={stopCamera}
                       variant="outline"
-                      className="h-12 px-6"
+                      className="h-14 px-6 rounded-2xl text-sm"
                     >
                       <Square className="w-5 h-5" />
                     </Button>
@@ -348,7 +360,7 @@ export default function ScanExit() {
                   <Button
                     onClick={() => setShowManualInput(!showManualInput)}
                     variant="outline"
-                    className="w-full h-12"
+                    className="w-full h-12 rounded-2xl"
                     disabled={processingRef.current || isScanning}
                   >
                     <Type className="w-5 h-5 mr-2" />
@@ -395,20 +407,7 @@ export default function ScanExit() {
       </Card>
 
       {/* Quick stats */}
-      <div className="grid grid-cols-2 gap-4">
-        <Card className="festival-card">
-          <CardContent className="p-4 text-center">
-            <div className="text-2xl font-bold text-orange-600">423</div>
-            <div className="text-sm text-gray-500">Sorties validées aujourd&apos;hui</div>
-          </CardContent>
-        </Card>
-        <Card className="festival-card">
-          <CardContent className="p-4 text-center">
-            <div className="text-2xl font-bold text-blue-600">1424</div>
-            <div className="text-sm text-gray-500">Personnes présentes</div>
-          </CardContent>
-        </Card>
-      </div>
+      <QuickStats type="exit" refreshTrigger={refreshTrigger} />
     </div>
   );
 }
