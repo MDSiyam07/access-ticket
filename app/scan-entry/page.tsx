@@ -214,9 +214,20 @@ export default function ScanEntry() {
             ref={scanAreaRef}
             className="relative aspect-square bg-gray-900 rounded-t-xl overflow-hidden"
           >
-            {/* Result Display ou Scanner */}
-            {scanResult ? (
-              <div className="absolute inset-0 bg-gradient-to-br from-gray-800 to-gray-900 flex items-center justify-center">
+            {/* Scanner QR - Toujours rendu mais masqué quand il y a un résultat */}
+            <div className={`absolute inset-0 ${scanResult ? 'invisible' : 'visible'}`}>
+              <ControlledQRScanner
+                onScanSuccess={handleQRScanSuccess}
+                onScanError={handleQRScanError}
+                isActive={isScanning && !scanResult}
+                onScannerReady={handleScannerReady}
+                onScannerError={handleScannerError}
+              />
+            </div>
+
+            {/* Result Display - Affiché par-dessus le scanner */}
+            {scanResult && (
+              <div className="absolute inset-0 bg-gradient-to-br from-gray-800 to-gray-900 flex items-center justify-center z-10">
                 <div className="text-center">
                   {scanResult === 'success' ? (
                     <div className="text-center">
@@ -251,15 +262,15 @@ export default function ScanEntry() {
                   )}
                 </div>
               </div>
-            ) : (
-              <div className="absolute inset-0">
-                <ControlledQRScanner
-                  onScanSuccess={handleQRScanSuccess}
-                  onScanError={handleQRScanError}
-                  isActive={isScanning}
-                  onScannerReady={handleScannerReady}
-                  onScannerError={handleScannerError}
-                />
+            )}
+
+            {/* Placeholder pendant l'initialisation */}
+            {!scannerReady && !scanResult && (
+              <div className="absolute inset-0 bg-gray-800 flex items-center justify-center">
+                <div className="text-center text-white">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white mx-auto mb-2"></div>
+                  <p className="text-sm">Initialisation du scanner...</p>
+                </div>
               </div>
             )}
           </div>

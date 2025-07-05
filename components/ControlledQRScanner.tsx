@@ -10,21 +10,29 @@ interface ControlledQRScannerProps {
   onScannerError?: (error: string) => void;
 }
 
-const waitForElement = (id: string, timeout = 2000): Promise<HTMLElement> => {
+const waitForElement = (id: string, timeout = 5000): Promise<HTMLElement> => {
   return new Promise((resolve, reject) => {
     const interval = 100;
     let elapsed = 0;
+    
     const check = () => {
       const el = document.getElementById(id);
-      if (el) return resolve(el);
+      if (el) {
+        console.log(`✅ Élément ${id} trouvé après ${elapsed}ms`);
+        return resolve(el);
+      }
       elapsed += interval;
-      if (elapsed >= timeout) return reject(new Error(`Élément DOM ${id} introuvable après ${timeout}ms`));
+      if (elapsed >= timeout) {
+        console.error(`❌ Élément ${id} introuvable après ${timeout}ms`);
+        return reject(new Error(`Élément DOM ${id} introuvable après ${timeout}ms`));
+      }
       setTimeout(check, interval);
     };
+    
+    // Vérifier immédiatement
     check();
   });
 };
-
 
 const ControlledQRScanner: React.FC<ControlledQRScannerProps> = ({
   onScanSuccess,
@@ -37,6 +45,7 @@ const ControlledQRScanner: React.FC<ControlledQRScannerProps> = ({
   const [scannerState, setScannerState] = useState<'idle' | 'initializing' | 'ready' | 'scanning' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [debugInfo, setDebugInfo] = useState<string[]>([]);
+  const [domReady, setDomReady] = useState(false);
   const isInitializing = useRef(false);
   const isMounted = useRef(true);
   const scannerId = 'controlled-qr-scanner';
@@ -64,7 +73,7 @@ const ControlledQRScanner: React.FC<ControlledQRScannerProps> = ({
     }
     
     // Vérifier si on est en HTTPS ou localhost
-    if (location.protocol !== 'https:' && location.hostname !== 'localhost') {
+    if (typeof window !== 'undefined' && window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') {
       issues.push('HTTPS requis pour la caméra');
     }
     
@@ -153,8 +162,8 @@ const ControlledQRScanner: React.FC<ControlledQRScannerProps> = ({
 
   // Initialiser le scanner
   const initializeScanner = useCallback(async () => {
-    if (isInitializing.current || scannerRef.current || !isMounted.current) {
-      addDebugInfo('Initialisation ignorée (déjà en cours ou composant démonté)');
+    if (isInitializing.current || scannerRef.current || !isMounted.current || !domReady) {
+      addDebugInfo('Initialisation ignorée (déjà en cours, DOM non prêt ou composant démonté)');
       return;
     }
     
@@ -163,8 +172,14 @@ const ControlledQRScanner: React.FC<ControlledQRScannerProps> = ({
       setScannerState('initializing');
       addDebugInfo('Début initialisation scanner');
       
-      // Vérifier les permissions
+      // Vérifier les permissions d'abord
       await checkCameraPermission();
+      
+      if (!isMounted.current) return;
+      
+      // Attendre que l'élément DOM soit disponible
+      addDebugInfo(`Attente de l'élément DOM ${scannerId}...`);
+      await waitForElement(scannerId, 5000);
       
       if (!isMounted.current) return;
       
@@ -175,20 +190,15 @@ const ControlledQRScanner: React.FC<ControlledQRScannerProps> = ({
         rememberLastUsedCamera: true,
         aspectRatio: 1.0,
         showTorchButtonIfSupported: true,
-        showZoomSliderIfSupported: false, // Désactiver le zoom pour éviter les conflits
+        showZoomSliderIfSupported: false,
         defaultZoomValueIfSupported: 1,
-        supportedScanTypes: [], // Laisser vide pour tous les types
+        supportedScanTypes: [],
         experimentalFeatures: {
           useBarCodeDetectorIfSupported: true
         }
       };
 
       addDebugInfo('Création de l\'instance Html5QrcodeScanner');
-      
-      // Attendre que le DOM soit prêt
-      await waitForElement(scannerId, 2000);
-
-      
       scannerRef.current = new Html5QrcodeScanner(scannerId, config, false);
       
       if (!isMounted.current) return;
@@ -212,7 +222,7 @@ const ControlledQRScanner: React.FC<ControlledQRScannerProps> = ({
     } finally {
       isInitializing.current = false;
     }
-  }, [checkCameraPermission, onScannerReady, onScannerError, addDebugInfo]);
+  }, [checkCameraPermission, onScannerReady, onScannerError, addDebugInfo, domReady]);
 
   // Démarrer le scan
   const startScanning = useCallback(async () => {
@@ -281,23 +291,40 @@ const ControlledQRScanner: React.FC<ControlledQRScannerProps> = ({
     }
   }, [cleanup, initializeScanner, addDebugInfo]);
 
-  // Effect pour l'initialisation
+  // Effect pour vérifier que le DOM est prêt
   useEffect(() => {
     isMounted.current = true;
     
-    // Délai pour s'assurer que le DOM est prêt
-    const timer = setTimeout(() => {
-      if (isMounted.current) {
-        initializeScanner();
+    // Vérifier que l'élément DOM est disponible
+    const checkDomReady = () => {
+      const element = document.getElementById(scannerId);
+      if (element) {
+        addDebugInfo('DOM prêt, élément trouvé');
+        setDomReady(true);
+      } else {
+        addDebugInfo('DOM non prêt, élément introuvable');
+        // Réessayer après un délai
+        setTimeout(checkDomReady, 100);
       }
-    }, 200);
+    };
+    
+    // Délai pour s'assurer que le rendu est terminé
+    const timer = setTimeout(checkDomReady, 50);
     
     return () => {
       isMounted.current = false;
       clearTimeout(timer);
       cleanup();
     };
-  }, [initializeScanner, cleanup]);
+  }, [addDebugInfo, cleanup]);
+
+  // Effect pour l'initialisation une fois que le DOM est prêt
+  useEffect(() => {
+    if (domReady && isMounted.current) {
+      addDebugInfo('DOM prêt, initialisation du scanner');
+      initializeScanner();
+    }
+  }, [domReady, initializeScanner, addDebugInfo]);
 
   // Effect pour contrôler le scanner
   useEffect(() => {
@@ -327,6 +354,8 @@ const ControlledQRScanner: React.FC<ControlledQRScannerProps> = ({
             </div>
           )}
         </div>
+        {/* L'élément DOM doit être présent même pendant l'initialisation */}
+        <div id={scannerId} className="hidden" />
       </div>
     );
   }
@@ -364,6 +393,8 @@ const ControlledQRScanner: React.FC<ControlledQRScannerProps> = ({
             Réessayer
           </button>
         </div>
+        {/* L'élément DOM doit être présent même en cas d'erreur */}
+        <div id={scannerId} className="hidden" />
       </div>
     );
   }
