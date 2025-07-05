@@ -5,9 +5,9 @@ import { Html5QrcodeScanner } from 'html5-qrcode';
 interface ControlledQRScannerProps {
   onScanSuccess: (decodedText: string) => void;
   onScanError?: (errorMessage: string) => void;
-  isActive: boolean; // Contrôle externe
-  onScannerReady?: () => void; // Callback quand le scanner est prêt
-  onScannerError?: (error: string) => void; // Callback pour les erreurs de setup
+  isActive: boolean;
+  onScannerReady?: () => void;
+  onScannerError?: (error: string) => void;
 }
 
 const ControlledQRScanner: React.FC<ControlledQRScannerProps> = ({
@@ -18,171 +18,305 @@ const ControlledQRScanner: React.FC<ControlledQRScannerProps> = ({
   onScannerError,
 }) => {
   const scannerRef = useRef<Html5QrcodeScanner | null>(null);
-  const [scannerState, setScannerState] = useState<'idle' | 'initializing' | 'ready' | 'error'>('idle');
+  const [scannerState, setScannerState] = useState<'idle' | 'initializing' | 'ready' | 'scanning' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [permissionGranted, setPermissionGranted] = useState<boolean | null>(null);
+  const [debugInfo, setDebugInfo] = useState<string[]>([]);
   const isInitializing = useRef(false);
+  const isMounted = useRef(true);
   const scannerId = 'controlled-qr-scanner';
 
-  // Vérifier les permissions caméra
-  const checkCameraPermission = useCallback(async () => {
-    try {
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        throw new Error("L'accès à la caméra n'est pas supporté par ce navigateur.");
-      }
+  // Fonction de debug
+  const addDebugInfo = useCallback((message: string) => {
+    console.log('🔍 QR Scanner:', message);
+    setDebugInfo(prev => [...prev.slice(-4), `${new Date().toLocaleTimeString()}: ${message}`]);
+  }, []);
 
-      // Test rapide d'accès à la caméra
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: { facingMode: 'environment' } 
-      });
-      
-      // Libérer immédiatement
-      stream.getTracks().forEach(track => track.stop());
-      
-      setPermissionGranted(true);
-      return true;
-    } catch (error) {
-      console.error('Erreur permission caméra:', error);
-      setPermissionGranted(false);
-      const errorMsg = error instanceof Error ? error.message : "Permission d'accès à la caméra refusée.";
-      setErrorMessage(errorMsg);
-      if (onScannerError) onScannerError(errorMsg);
-      return false;
-    }
-  }, [onScannerError]);
-
-  // Callbacks stables
-  const handleScanSuccess = useCallback((decodedText: string) => {
-    console.log('✅ QR Code détecté:', decodedText);
-    onScanSuccess(decodedText);
-  }, [onScanSuccess]);
-
-  const handleScanError = useCallback((error: string) => {
-    // Filtrer les erreurs de scan normales (pas de QR trouvé)
-    if (error.includes('NotFoundException') || 
-        error.includes('No QR code found') ||
-        error.includes('QR code parse error')) {
-      return;
+  // Vérifier la compatibilité du navigateur
+  const checkBrowserCompatibility = useCallback(() => {
+    const issues = [];
+    
+    if (!navigator.mediaDevices) {
+      issues.push('navigator.mediaDevices non disponible');
     }
     
-    console.warn('⚠️ Erreur de scan:', error);
+    if (!navigator.mediaDevices?.getUserMedia) {
+      issues.push('getUserMedia non supporté');
+    }
+    
+    if (!window.HTMLVideoElement) {
+      issues.push('HTMLVideoElement non supporté');
+    }
+    
+    // Vérifier si on est en HTTPS ou localhost
+    if (location.protocol !== 'https:' && location.hostname !== 'localhost') {
+      issues.push('HTTPS requis pour la caméra');
+    }
+    
+    return issues;
+  }, []);
+
+  // Vérifier les permissions caméra avec retry
+  const checkCameraPermission = useCallback(async (retryCount = 0) => {
+    try {
+      addDebugInfo('Vérification des permissions caméra...');
+      
+      // Vérifier la compatibilité d'abord
+      const compatibilityIssues = checkBrowserCompatibility();
+      if (compatibilityIssues.length > 0) {
+        throw new Error(`Incompatibilité navigateur: ${compatibilityIssues.join(', ')}`);
+      }
+
+      // Tenter d'accéder à la caméra
+      const constraints = {
+        video: {
+          facingMode: 'environment', // Caméra arrière préférée
+          width: { ideal: 640 },
+          height: { ideal: 480 }
+        }
+      };
+
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      
+      // Vérifier que le stream est valide
+      if (!stream || stream.getTracks().length === 0) {
+        throw new Error('Stream caméra invalide');
+      }
+      
+      addDebugInfo(`Caméra accessible: ${stream.getTracks().length} tracks`);
+      
+      // Libérer immédiatement le stream
+      stream.getTracks().forEach(track => {
+        track.stop();
+        addDebugInfo(`Track ${track.kind} libéré`);
+      });
+      
+      return true;
+      
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue';
+      addDebugInfo(`Erreur permission (tentative ${retryCount + 1}): ${errorMessage}`);
+      
+      // Retry une fois avec des contraintes plus souples
+      if (retryCount === 0) {
+        try {
+          const simpleConstraints = { video: true };
+          const stream = await navigator.mediaDevices.getUserMedia(simpleConstraints);
+          stream.getTracks().forEach(track => track.stop());
+          addDebugInfo('Caméra accessible avec contraintes simples');
+          return true;
+        } catch (retryError) {
+          const retryErrorMessage = retryError instanceof Error ? retryError.message : 'Erreur inconnue';
+          addDebugInfo(`Retry échoué: ${retryErrorMessage}`);
+        }
+      }
+      
+      throw error;
+    }
+  }, [addDebugInfo, checkBrowserCompatibility]);
+
+  // Callbacks stables pour le scanner
+  const handleScanSuccess = useCallback((decodedText: string) => {
+    addDebugInfo(`QR Code détecté: ${decodedText.substring(0, 20)}...`);
+    onScanSuccess(decodedText);
+  }, [onScanSuccess, addDebugInfo]);
+
+  const handleScanError = useCallback((error: string) => {
+    // Filtrer les erreurs normales de scan
+    if (error.includes('NotFoundException') || 
+        error.includes('No QR code found') ||
+        error.includes('QR code parse error') ||
+        error.includes('NotFoundError')) {
+      return; // Ces erreurs sont normales quand il n'y a pas de QR code
+    }
+    
+    addDebugInfo(`Erreur de scan: ${error}`);
     if (onScanError) {
       onScanError(error);
     }
-  }, [onScanError]);
+  }, [onScanError, addDebugInfo]);
 
-  // Initialiser le scanner (mais ne pas le démarrer)
+  // Initialiser le scanner
   const initializeScanner = useCallback(async () => {
-    if (isInitializing.current || scannerRef.current) return;
+    if (isInitializing.current || scannerRef.current || !isMounted.current) {
+      addDebugInfo('Initialisation ignorée (déjà en cours ou composant démonté)');
+      return;
+    }
     
     try {
       isInitializing.current = true;
       setScannerState('initializing');
+      addDebugInfo('Début initialisation scanner');
       
-      const hasPermission = await checkCameraPermission();
-      if (!hasPermission) {
-        setScannerState('error');
-        return;
-      }
-
+      // Vérifier les permissions
+      await checkCameraPermission();
+      
+      if (!isMounted.current) return;
+      
+      // Configuration du scanner
       const config = {
         fps: 10,
         qrbox: { width: 250, height: 250 },
         rememberLastUsedCamera: true,
         aspectRatio: 1.0,
         showTorchButtonIfSupported: true,
-        showZoomSliderIfSupported: true,
+        showZoomSliderIfSupported: false, // Désactiver le zoom pour éviter les conflits
+        defaultZoomValueIfSupported: 1,
+        supportedScanTypes: [], // Laisser vide pour tous les types
         experimentalFeatures: {
           useBarCodeDetectorIfSupported: true
         }
       };
 
+      addDebugInfo('Création de l\'instance Html5QrcodeScanner');
+      
+      // Attendre que le DOM soit prêt
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      if (!isMounted.current) return;
+      
+      // Vérifier que l'élément DOM existe
+      const element = document.getElementById(scannerId);
+      if (!element) {
+        throw new Error(`Élément DOM ${scannerId} introuvable`);
+      }
+      
       scannerRef.current = new Html5QrcodeScanner(scannerId, config, false);
+      
+      if (!isMounted.current) return;
+      
+      addDebugInfo('Scanner initialisé avec succès');
       setScannerState('ready');
       setErrorMessage(null);
       
-      if (onScannerReady) onScannerReady();
+      if (onScannerReady) {
+        onScannerReady();
+      }
       
-    } catch (error) {
-      console.error('❌ Erreur initialisation scanner:', error);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue lors de l\'initialisation';
+      addDebugInfo(`Erreur initialisation: ${errorMessage}`);
       setScannerState('error');
-      const errorMsg = error instanceof Error ? error.message : "Erreur lors de l'initialisation du scanner.";
-      setErrorMessage(errorMsg);
-      if (onScannerError) onScannerError(errorMsg);
+      setErrorMessage(errorMessage);
+      if (onScannerError) {
+        onScannerError(errorMessage);
+      }
     } finally {
       isInitializing.current = false;
     }
-  }, [checkCameraPermission, onScannerReady, onScannerError]);
+  }, [checkCameraPermission, onScannerReady, onScannerError, addDebugInfo]);
 
   // Démarrer le scan
   const startScanning = useCallback(async () => {
-    if (!scannerRef.current || scannerState !== 'ready') return;
+    if (!scannerRef.current || scannerState !== 'ready' || !isMounted.current) {
+      addDebugInfo('Démarrage ignoré - scanner non prêt');
+      return;
+    }
     
     try {
+      addDebugInfo('Démarrage du scan');
+      setScannerState('scanning');
+      
+      // Attendre un peu pour éviter les conflits
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      if (!isMounted.current) return;
+      
       await scannerRef.current.render(handleScanSuccess, handleScanError);
-      console.log('📱 Scanner démarré');
+      addDebugInfo('Scanner démarré avec succès');
+      
     } catch (error) {
-      console.error('❌ Erreur démarrage scan:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue';
+      addDebugInfo(`Erreur démarrage: ${errorMessage}`);
       setScannerState('error');
+      setErrorMessage(errorMessage);
     }
-  }, [handleScanSuccess, handleScanError, scannerState]);
+  }, [handleScanSuccess, handleScanError, scannerState, addDebugInfo]);
 
   // Arrêter le scan
   const stopScanning = useCallback(async () => {
-    if (!scannerRef.current) return;
+    if (!scannerRef.current || !isMounted.current) return;
     
     try {
+      addDebugInfo('Arrêt du scanner');
       await scannerRef.current.clear();
-      console.log('🛑 Scanner arrêté');
+      setScannerState('ready');
+      addDebugInfo('Scanner arrêté');
     } catch (error) {
-      console.warn('⚠️ Erreur arrêt scanner:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue';
+      addDebugInfo(`Erreur arrêt: ${errorMessage}`);
     }
-  }, []);
+  }, [addDebugInfo]);
 
-  // Nettoyer complètement le scanner
+  // Nettoyer le scanner
   const cleanup = useCallback(async () => {
     if (scannerRef.current) {
       try {
+        addDebugInfo('Nettoyage du scanner');
         await scannerRef.current.clear();
         scannerRef.current = null;
         setScannerState('idle');
-        console.log('🧹 Scanner nettoyé');
       } catch (error) {
-        console.warn('⚠️ Erreur nettoyage:', error);
+        const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue';
+        addDebugInfo(`Erreur nettoyage: ${errorMessage}`);
       }
     }
-  }, []);
+  }, [addDebugInfo]);
 
-  // Effect pour initialiser le scanner au montage
+  // Redémarrer le scanner
+  const restartScanner = useCallback(async () => {
+    addDebugInfo('Redémarrage du scanner');
+    await cleanup();
+    await new Promise(resolve => setTimeout(resolve, 500));
+    if (isMounted.current) {
+      await initializeScanner();
+    }
+  }, [cleanup, initializeScanner, addDebugInfo]);
+
+  // Effect pour l'initialisation
   useEffect(() => {
-    initializeScanner();
+    isMounted.current = true;
+    
+    // Délai pour s'assurer que le DOM est prêt
+    const timer = setTimeout(() => {
+      if (isMounted.current) {
+        initializeScanner();
+      }
+    }, 200);
     
     return () => {
+      isMounted.current = false;
+      clearTimeout(timer);
       cleanup();
     };
   }, [initializeScanner, cleanup]);
 
-  // Effect pour contrôler le scanner selon isActive
+  // Effect pour contrôler le scanner
   useEffect(() => {
-    if (scannerState !== 'ready') return;
+    if (!isMounted.current) return;
     
-    if (isActive) {
+    if (scannerState === 'ready' && isActive) {
       startScanning();
-    } else {
+    } else if (scannerState === 'scanning' && !isActive) {
       stopScanning();
     }
   }, [isActive, scannerState, startScanning, stopScanning]);
 
-  // Rendu conditionnel selon l'état
+  // Rendu selon l'état
   if (scannerState === 'idle' || scannerState === 'initializing') {
     return (
-      <div className="flex items-center justify-center h-64 bg-gray-100 rounded-lg">
+      <div className="flex flex-col items-center justify-center h-64 bg-gray-100 rounded-lg p-4">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-2"></div>
-          <p className="text-gray-600">
+          <p className="text-gray-600 mb-2">
             {scannerState === 'idle' ? 'Initialisation...' : 'Préparation de la caméra...'}
           </p>
+          {debugInfo.length > 0 && (
+            <div className="text-xs text-gray-500 max-w-xs">
+              {debugInfo.map((info, index) => (
+                <div key={index} className="truncate">{info}</div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     );
@@ -190,17 +324,32 @@ const ControlledQRScanner: React.FC<ControlledQRScannerProps> = ({
 
   if (scannerState === 'error') {
     return (
-      <div className="flex items-center justify-center h-64 bg-red-50 rounded-lg border-2 border-red-200">
-        <div className="text-center p-4">
+      <div className="flex flex-col items-center justify-center h-64 bg-red-50 rounded-lg border-2 border-red-200 p-4">
+        <div className="text-center">
           <div className="text-red-500 mb-2">
             <svg className="w-8 h-8 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
             </svg>
           </div>
-          <p className="text-red-600 font-semibold mb-1">Erreur de caméra</p>
-          <p className="text-red-500 text-sm mb-3">{errorMessage}</p>
+          <p className="text-red-600 font-semibold mb-1">Erreur de scanner</p>
+          <p className="text-red-500 text-sm mb-3 max-w-xs">{errorMessage}</p>
+          
+          {/* Infos de debug */}
+          {debugInfo.length > 0 && (
+            <div className="text-xs text-gray-600 mb-3 max-w-xs">
+              <details>
+                <summary className="cursor-pointer text-gray-500">Détails techniques</summary>
+                <div className="mt-2 text-left">
+                  {debugInfo.map((info, index) => (
+                    <div key={index} className="break-all">{info}</div>
+                  ))}
+                </div>
+              </details>
+            </div>
+          )}
+          
           <button
-            onClick={initializeScanner}
+            onClick={restartScanner}
             className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 text-sm"
           >
             Réessayer
@@ -211,10 +360,10 @@ const ControlledQRScanner: React.FC<ControlledQRScannerProps> = ({
   }
 
   return (
-    <div className="w-full">
+    <div className="w-full relative">
       <div id={scannerId} className="w-full" />
       
-      {!isActive && (
+      {scannerState === 'ready' && !isActive && (
         <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center rounded-lg">
           <div className="text-center text-white">
             <div className="mb-2">
@@ -223,8 +372,21 @@ const ControlledQRScanner: React.FC<ControlledQRScannerProps> = ({
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
               </svg>
             </div>
-            <p className="text-sm">Scanner en pause</p>
+            <p className="text-sm">Scanner prêt</p>
+            <p className="text-xs opacity-75">Cliquez sur &quot;Démarrer&quot; pour activer</p>
           </div>
+        </div>
+      )}
+      
+      {/* Debug info en bas */}
+      {process.env.NODE_ENV === 'development' && debugInfo.length > 0 && (
+        <div className="mt-2 text-xs text-gray-500 bg-gray-50 p-2 rounded">
+          <details>
+            <summary>Debug Info</summary>
+            {debugInfo.map((info, index) => (
+              <div key={index}>{info}</div>
+            ))}
+          </details>
         </div>
       )}
     </div>
