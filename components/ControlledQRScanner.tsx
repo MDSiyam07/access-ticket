@@ -29,7 +29,6 @@ const waitForElement = (id: string, timeout = 5000): Promise<HTMLElement> => {
       setTimeout(check, interval);
     };
     
-    // Vérifier immédiatement
     check();
   });
 };
@@ -46,6 +45,7 @@ const ControlledQRScanner: React.FC<ControlledQRScannerProps> = ({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [debugInfo, setDebugInfo] = useState<string[]>([]);
   const [domReady, setDomReady] = useState(false);
+  const [isPWA, setIsPWA] = useState(false);
   const isInitializing = useRef(false);
   const isMounted = useRef(true);
   const scannerId = 'controlled-qr-scanner';
@@ -55,6 +55,22 @@ const ControlledQRScanner: React.FC<ControlledQRScannerProps> = ({
     console.log('🔍 QR Scanner:', message);
     setDebugInfo(prev => [...prev.slice(-4), `${new Date().toLocaleTimeString()}: ${message}`]);
   }, []);
+
+  // Détecter si on est dans une PWA
+  useEffect(() => {
+    const detectPWA = () => {
+      const isPWAMode = window.matchMedia('(display-mode: standalone)').matches ||
+                       window.matchMedia('(display-mode: fullscreen)').matches ||
+                       // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                       (window.navigator as { standalone?: boolean }).standalone === true ||
+                       document.referrer.includes('android-app://');
+      
+      setIsPWA(isPWAMode);
+      addDebugInfo(`Mode PWA détecté: ${isPWAMode}`);
+    };
+    
+    detectPWA();
+  }, [addDebugInfo]);
 
   // Vérifier la compatibilité du navigateur
   const checkBrowserCompatibility = useCallback(() => {
@@ -72,15 +88,18 @@ const ControlledQRScanner: React.FC<ControlledQRScannerProps> = ({
       issues.push('HTMLVideoElement non supporté');
     }
     
-    // Vérifier si on est en HTTPS ou localhost
-    if (typeof window !== 'undefined' && window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') {
-      issues.push('HTTPS requis pour la caméra');
+    // Vérifier le contexte de sécurité
+    if (typeof window !== 'undefined') {
+      const isSecureContext = window.isSecureContext;
+      if (!isSecureContext) {
+        issues.push('Contexte non sécurisé (HTTPS requis)');
+      }
     }
     
     return issues;
   }, []);
 
-  // Vérifier les permissions caméra avec retry
+  // Vérifier les permissions caméra avec gestion spéciale PWA
   const checkCameraPermission = useCallback(async (retryCount = 0) => {
     try {
       addDebugInfo('Vérification des permissions caméra...');
@@ -88,13 +107,34 @@ const ControlledQRScanner: React.FC<ControlledQRScannerProps> = ({
       // Vérifier la compatibilité d'abord
       const compatibilityIssues = checkBrowserCompatibility();
       if (compatibilityIssues.length > 0) {
-        throw new Error(`Incompatibilité navigateur: ${compatibilityIssues.join(', ')}`);
+        throw new Error(`Incompatibilité: ${compatibilityIssues.join(', ')}`);
       }
 
-      // Tenter d'accéder à la caméra
-      const constraints = {
+      // Vérifier les permissions avec l'API Permissions si disponible
+      if ('permissions' in navigator) {
+        try {
+          const permission = await navigator.permissions.query({ name: 'camera' as PermissionName });
+          addDebugInfo(`Permission caméra: ${permission.state}`);
+          
+          if (permission.state === 'denied') {
+            throw new Error('Permission caméra refusée par l\'utilisateur');
+          }
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        } catch {
+          addDebugInfo('API Permissions non disponible ou erreur');
+        }
+      }
+
+      // Contraintes adaptées pour PWA
+      const constraints = isPWA ? {
         video: {
-          facingMode: 'environment', // Caméra arrière préférée
+          facingMode: 'environment',
+          width: { min: 320, ideal: 640, max: 1920 },
+          height: { min: 240, ideal: 480, max: 1080 }
+        }
+      } : {
+        video: {
+          facingMode: 'environment',
           width: { ideal: 640 },
           height: { ideal: 480 }
         }
@@ -102,7 +142,6 @@ const ControlledQRScanner: React.FC<ControlledQRScannerProps> = ({
 
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
       
-      // Vérifier que le stream est valide
       if (!stream || stream.getTracks().length === 0) {
         throw new Error('Stream caméra invalide');
       }
@@ -121,9 +160,10 @@ const ControlledQRScanner: React.FC<ControlledQRScannerProps> = ({
       const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue';
       addDebugInfo(`Erreur permission (tentative ${retryCount + 1}): ${errorMessage}`);
       
-      // Retry une fois avec des contraintes plus souples
+      // Retry avec des contraintes plus souples
       if (retryCount === 0) {
         try {
+          await new Promise(resolve => setTimeout(resolve, 1000)); // Attendre avant retry
           const simpleConstraints = { video: true };
           const stream = await navigator.mediaDevices.getUserMedia(simpleConstraints);
           stream.getTracks().forEach(track => track.stop());
@@ -137,7 +177,7 @@ const ControlledQRScanner: React.FC<ControlledQRScannerProps> = ({
       
       throw error;
     }
-  }, [addDebugInfo, checkBrowserCompatibility]);
+  }, [addDebugInfo, checkBrowserCompatibility, isPWA]);
 
   // Callbacks stables pour le scanner
   const handleScanSuccess = useCallback((decodedText: string) => {
@@ -151,7 +191,7 @@ const ControlledQRScanner: React.FC<ControlledQRScannerProps> = ({
         error.includes('No QR code found') ||
         error.includes('QR code parse error') ||
         error.includes('NotFoundError')) {
-      return; // Ces erreurs sont normales quand il n'y a pas de QR code
+      return;
     }
     
     addDebugInfo(`Erreur de scan: ${error}`);
@@ -160,7 +200,7 @@ const ControlledQRScanner: React.FC<ControlledQRScannerProps> = ({
     }
   }, [onScanError, addDebugInfo]);
 
-  // Initialiser le scanner
+  // Initialiser le scanner avec configuration PWA
   const initializeScanner = useCallback(async () => {
     if (isInitializing.current || scannerRef.current || !isMounted.current || !domReady) {
       addDebugInfo('Initialisation ignorée (déjà en cours, DOM non prêt ou composant démonté)');
@@ -172,6 +212,11 @@ const ControlledQRScanner: React.FC<ControlledQRScannerProps> = ({
       setScannerState('initializing');
       addDebugInfo('Début initialisation scanner');
       
+      // Attendre un peu plus longtemps pour les PWA
+      if (isPWA) {
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+      
       // Vérifier les permissions d'abord
       await checkCameraPermission();
       
@@ -179,13 +224,13 @@ const ControlledQRScanner: React.FC<ControlledQRScannerProps> = ({
       
       // Attendre que l'élément DOM soit disponible
       addDebugInfo(`Attente de l'élément DOM ${scannerId}...`);
-      await waitForElement(scannerId, 5000);
+      await waitForElement(scannerId, 8000); // Timeout plus long pour PWA
       
       if (!isMounted.current) return;
       
-      // Configuration du scanner
+      // Configuration du scanner adaptée pour PWA
       const config = {
-        fps: 10,
+        fps: isPWA ? 8 : 10, // FPS plus bas pour PWA
         qrbox: { width: 250, height: 250 },
         rememberLastUsedCamera: true,
         aspectRatio: 1.0,
@@ -194,8 +239,14 @@ const ControlledQRScanner: React.FC<ControlledQRScannerProps> = ({
         defaultZoomValueIfSupported: 1,
         supportedScanTypes: [],
         experimentalFeatures: {
-          useBarCodeDetectorIfSupported: true
-        }
+          useBarCodeDetectorIfSupported: !isPWA // Désactiver pour PWA
+        },
+        // Options spéciales pour PWA
+        videoConstraints: isPWA ? {
+          facingMode: 'environment',
+          width: { min: 320, ideal: 640 },
+          height: { min: 240, ideal: 480 }
+        } : undefined
       };
 
       addDebugInfo('Création de l\'instance Html5QrcodeScanner');
@@ -222,7 +273,7 @@ const ControlledQRScanner: React.FC<ControlledQRScannerProps> = ({
     } finally {
       isInitializing.current = false;
     }
-  }, [checkCameraPermission, onScannerReady, onScannerError, addDebugInfo, domReady]);
+  }, [checkCameraPermission, onScannerReady, onScannerError, addDebugInfo, domReady, isPWA]);
 
   // Démarrer le scan
   const startScanning = useCallback(async () => {
@@ -235,8 +286,8 @@ const ControlledQRScanner: React.FC<ControlledQRScannerProps> = ({
       addDebugInfo('Démarrage du scan');
       setScannerState('scanning');
       
-      // Attendre un peu pour éviter les conflits
-      await new Promise(resolve => setTimeout(resolve, 100));
+      // Attendre plus longtemps pour les PWA
+      await new Promise(resolve => setTimeout(resolve, isPWA ? 300 : 100));
       
       if (!isMounted.current) return;
       
@@ -249,7 +300,7 @@ const ControlledQRScanner: React.FC<ControlledQRScannerProps> = ({
       setScannerState('error');
       setErrorMessage(errorMessage);
     }
-  }, [handleScanSuccess, handleScanError, scannerState, addDebugInfo]);
+  }, [handleScanSuccess, handleScanError, scannerState, addDebugInfo, isPWA]);
 
   // Arrêter le scan
   const stopScanning = useCallback(async () => {
@@ -285,17 +336,16 @@ const ControlledQRScanner: React.FC<ControlledQRScannerProps> = ({
   const restartScanner = useCallback(async () => {
     addDebugInfo('Redémarrage du scanner');
     await cleanup();
-    await new Promise(resolve => setTimeout(resolve, 500));
+    await new Promise(resolve => setTimeout(resolve, isPWA ? 1000 : 500));
     if (isMounted.current) {
       await initializeScanner();
     }
-  }, [cleanup, initializeScanner, addDebugInfo]);
+  }, [cleanup, initializeScanner, addDebugInfo, isPWA]);
 
   // Effect pour vérifier que le DOM est prêt
   useEffect(() => {
     isMounted.current = true;
     
-    // Vérifier que l'élément DOM est disponible
     const checkDomReady = () => {
       const element = document.getElementById(scannerId);
       if (element) {
@@ -303,20 +353,18 @@ const ControlledQRScanner: React.FC<ControlledQRScannerProps> = ({
         setDomReady(true);
       } else {
         addDebugInfo('DOM non prêt, élément introuvable');
-        // Réessayer après un délai
         setTimeout(checkDomReady, 100);
       }
     };
     
-    // Délai pour s'assurer que le rendu est terminé
-    const timer = setTimeout(checkDomReady, 50);
+    const timer = setTimeout(checkDomReady, isPWA ? 200 : 50);
     
     return () => {
       isMounted.current = false;
       clearTimeout(timer);
       cleanup();
     };
-  }, [addDebugInfo, cleanup]);
+  }, [addDebugInfo, cleanup, isPWA]);
 
   // Effect pour l'initialisation une fois que le DOM est prêt
   useEffect(() => {
@@ -346,6 +394,9 @@ const ControlledQRScanner: React.FC<ControlledQRScannerProps> = ({
           <p className="text-gray-600 mb-2">
             {scannerState === 'idle' ? 'Initialisation...' : 'Préparation de la caméra...'}
           </p>
+          {isPWA && (
+            <p className="text-xs text-blue-600 mb-2">Mode PWA détecté</p>
+          )}
           {debugInfo.length > 0 && (
             <div className="text-xs text-gray-500 max-w-xs">
               {debugInfo.map((info, index) => (
@@ -354,7 +405,6 @@ const ControlledQRScanner: React.FC<ControlledQRScannerProps> = ({
             </div>
           )}
         </div>
-        {/* L'élément DOM doit être présent même pendant l'initialisation */}
         <div id={scannerId} className="hidden" />
       </div>
     );
@@ -372,7 +422,13 @@ const ControlledQRScanner: React.FC<ControlledQRScannerProps> = ({
           <p className="text-red-600 font-semibold mb-1">Erreur de scanner</p>
           <p className="text-red-500 text-sm mb-3 max-w-xs">{errorMessage}</p>
           
-          {/* Infos de debug */}
+          {isPWA && (
+            <div className="text-xs text-blue-600 mb-2 bg-blue-50 p-2 rounded">
+              <p>Mode PWA détecté</p>
+              <p>Assurez-vous d&apos;avoir autorisé l&apos;accès à la caméra</p>
+            </div>
+          )}
+          
           {debugInfo.length > 0 && (
             <div className="text-xs text-gray-600 mb-3 max-w-xs">
               <details>
@@ -393,7 +449,6 @@ const ControlledQRScanner: React.FC<ControlledQRScannerProps> = ({
             Réessayer
           </button>
         </div>
-        {/* L'élément DOM doit être présent même en cas d'erreur */}
         <div id={scannerId} className="hidden" />
       </div>
     );
@@ -414,15 +469,17 @@ const ControlledQRScanner: React.FC<ControlledQRScannerProps> = ({
             </div>
             <p className="text-sm">Scanner prêt</p>
             <p className="text-xs opacity-75">Cliquez sur &quot;Démarrer&quot; pour activer</p>
+            {isPWA && (
+              <p className="text-xs opacity-75 mt-1">Mode PWA</p>
+            )}
           </div>
         </div>
       )}
       
-      {/* Debug info en bas */}
       {process.env.NODE_ENV === 'development' && debugInfo.length > 0 && (
         <div className="mt-2 text-xs text-gray-500 bg-gray-50 p-2 rounded">
           <details>
-            <summary>Debug Info</summary>
+            <summary>Debug Info {isPWA && '(PWA Mode)'}</summary>
             {debugInfo.map((info, index) => (
               <div key={index}>{info}</div>
             ))}

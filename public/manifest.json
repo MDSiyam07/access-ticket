@@ -4,13 +4,19 @@
   "description": "Système de contrôle d'accès professionnel pour événements",
   "start_url": "/",
   "permissions": ["camera"],
+  "features": [
+    {
+      "name": "camera",
+      "required": true
+    }
+  ],
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#1e40af",
   "orientation": "portrait-primary",
   "scope": "/",
   "lang": "fr",
-  "categories": ["business", "productivity"],
+  "categories": ["business", "productivity", "utilities", "event", "festival"],
   "icons": [
     {
       "src": "/icon-192x192.svg",
