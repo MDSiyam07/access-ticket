@@ -10,6 +10,22 @@ interface ControlledQRScannerProps {
   onScannerError?: (error: string) => void;
 }
 
+const waitForElement = (id: string, timeout = 2000): Promise<HTMLElement> => {
+  return new Promise((resolve, reject) => {
+    const interval = 100;
+    let elapsed = 0;
+    const check = () => {
+      const el = document.getElementById(id);
+      if (el) return resolve(el);
+      elapsed += interval;
+      if (elapsed >= timeout) return reject(new Error(`Élément DOM ${id} introuvable après ${timeout}ms`));
+      setTimeout(check, interval);
+    };
+    check();
+  });
+};
+
+
 const ControlledQRScanner: React.FC<ControlledQRScannerProps> = ({
   onScanSuccess,
   onScanError,
@@ -170,15 +186,8 @@ const ControlledQRScanner: React.FC<ControlledQRScannerProps> = ({
       addDebugInfo('Création de l\'instance Html5QrcodeScanner');
       
       // Attendre que le DOM soit prêt
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
-      if (!isMounted.current) return;
-      
-      // Vérifier que l'élément DOM existe
-      const element = document.getElementById(scannerId);
-      if (!element) {
-        throw new Error(`Élément DOM ${scannerId} introuvable`);
-      }
+      await waitForElement(scannerId, 2000);
+
       
       scannerRef.current = new Html5QrcodeScanner(scannerId, config, false);
       
