@@ -722,6 +722,7 @@ const ControlledQRScanner: React.FC<ControlledQRScannerProps> = ({
         onScannerError(errorMessage);
       }
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [addDebugInfo, checkCameraPermission, onScannerError]);
 
   // Callbacks stables pour le scanner

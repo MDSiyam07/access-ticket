@@ -10,15 +10,15 @@ interface ExitRouteProps {
 }
 
 export default function ExitRoute({ children, fallback }: ExitRouteProps) {
-  const { isExitUser, isReentryUser, isAuthenticated, isLoading } = useAuth();
+  const { isExitUser, isReentryUser, isAdmin, isAuthenticated, isLoading } = useAuth();
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
       window.location.href = '/login';
-    } else if (!isLoading && isAuthenticated && !isExitUser && !isReentryUser) {
+    } else if (!isLoading && isAuthenticated && !isExitUser && !isReentryUser && !isAdmin) {
       window.location.href = '/dashboard';
     }
-  }, [isExitUser, isReentryUser, isAuthenticated, isLoading]);
+  }, [isExitUser, isReentryUser, isAdmin, isAuthenticated, isLoading]);
 
   if (isLoading) {
     return (
@@ -35,7 +35,7 @@ export default function ExitRoute({ children, fallback }: ExitRouteProps) {
     return null; // Will redirect to login
   }
 
-  if (!isExitUser && !isReentryUser) {
+  if (!isExitUser && !isReentryUser && !isAdmin) {
     if (fallback) {
       return <>{fallback}</>;
     }
@@ -50,7 +50,7 @@ export default function ExitRoute({ children, fallback }: ExitRouteProps) {
             Accès Sorties Seulement
           </h2>
           <p className="text-gray-600 mb-6">
-            Cette page est réservée aux contrôleurs de sortie et ré-entrée. Vous n&apos;avez pas les permissions nécessaires.
+            Cette page est réservée aux contrôleurs de sortie, ré-entrée et administrateurs. Vous n&apos;avez pas les permissions nécessaires.
           </p>
           <button
             onClick={() => window.location.href = '/dashboard'}

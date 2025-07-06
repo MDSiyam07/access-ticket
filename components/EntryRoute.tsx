@@ -10,15 +10,15 @@ interface EntryRouteProps {
 }
 
 export default function EntryRoute({ children, fallback }: EntryRouteProps) {
-  const { isEntryUser, isAuthenticated, isLoading } = useAuth();
+  const { isEntryUser, isReentryUser, isAdmin, isAuthenticated, isLoading } = useAuth();
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
       window.location.href = '/login';
-    } else if (!isLoading && isAuthenticated && !isEntryUser) {
+    } else if (!isLoading && isAuthenticated && !isEntryUser && !isReentryUser && !isAdmin) {
       window.location.href = '/dashboard';
     }
-  }, [isEntryUser, isAuthenticated, isLoading]);
+  }, [isEntryUser, isReentryUser, isAdmin, isAuthenticated, isLoading]);
 
   if (isLoading) {
     return (
@@ -35,7 +35,7 @@ export default function EntryRoute({ children, fallback }: EntryRouteProps) {
     return null; // Will redirect to login
   }
 
-  if (!isEntryUser) {
+  if (!isEntryUser && !isReentryUser && !isAdmin) {
     if (fallback) {
       return <>{fallback}</>;
     }
@@ -50,7 +50,7 @@ export default function EntryRoute({ children, fallback }: EntryRouteProps) {
             Accès Entrées Seulement
           </h2>
           <p className="text-gray-600 mb-6">
-            Cette page est réservée aux contrôleurs d&apos;entrée. Vous n&apos;avez pas les permissions nécessaires.
+            Cette page est réservée aux contrôleurs d&apos;entrée, ré-entrée et administrateurs. Vous n&apos;avez pas les permissions nécessaires.
           </p>
           <button
             onClick={() => window.location.href = '/dashboard'}

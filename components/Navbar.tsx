@@ -12,11 +12,9 @@ import {
   Edit3, 
   Menu, 
   X,
-  Users,
   Settings,
   LogIn,
-  LogOut,
-  RefreshCw
+  LogOut
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -66,8 +64,8 @@ export default function Navbar({ children }: NavbarProps) {
     if (isAdmin) {
       return [
         { name: 'Statistiques', href: '/dashboard', icon: BarChart3 },
-        { name: 'Scan Entrée', href: '/scan-entry', icon: ScanLine },
-        { name: 'Scan Sortie', href: '/scan-exit', icon: Users },
+        { name: 'Scan Entrée', href: '/scan-entry', icon: LogIn },
+        { name: 'Scan Sortie', href: '/scan-exit', icon: LogOut },
         { name: 'Historique', href: '/history', icon: History },
         { name: 'Saisie Manuelle', href: '/manual-entry', icon: Edit3 },
         { name: 'Administration', href: '/admin', icon: Settings },
@@ -87,8 +85,7 @@ export default function Navbar({ children }: NavbarProps) {
     } else if (isReentryUser) {
       return [
         { name: 'Statistiques', href: '/dashboard', icon: BarChart3 },
-        { name: 'Scan Sortie', href: '/scan-exit', icon: LogOut },
-        { name: 'Ré-entrées', href: '/scan-entry', icon: RefreshCw },
+        { name: 'Scan Entrée', href: '/scan-entry', icon: LogIn },
         { name: 'Saisie Manuelle', href: '/manual-entry', icon: Edit3 },
       ];
     }

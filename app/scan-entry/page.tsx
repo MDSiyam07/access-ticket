@@ -240,15 +240,17 @@ export default function ScanEntry() {
               className="relative aspect-square bg-gradient-to-br from-modern-violet-900 to-modern-cyan-900 rounded-t-3xl overflow-hidden"
             >
               {/* Scanner QR - Toujours rendu mais masqué quand il y a un résultat */}
-              <div className={`absolute inset-0 ${scanResult ? 'invisible' : 'visible'}`}>
-                <ControlledQRScanner
-                  onScanSuccess={handleQRScanSuccess}
-                  onScanError={handleQRScanError}
-                  isActive={isScanning && !scanResult}
-                  onScannerReady={handleScannerReady}
-                  onScannerError={handleScannerError}
-                />
-              </div>
+              {isScanning && !scanResult && (
+                <div className="absolute inset-0">
+                  <ControlledQRScanner
+                    onScanSuccess={handleQRScanSuccess}
+                    onScanError={handleQRScanError}
+                    isActive
+                    onScannerReady={handleScannerReady}
+                    onScannerError={handleScannerError}
+                  />
+                </div>
+              )}
 
               {/* Result Display - Affiché par-dessus le scanner */}
               {scanResult && (
@@ -317,9 +319,9 @@ export default function ScanEntry() {
                       <Button
                         onClick={stopCamera}
                         variant="outline"
-                        className="h-14 px-6 rounded-2xl text-sm border-modern-violet-200 text-modern-violet-600 hover:bg-modern-violet-50"
+                        className="h-14 px-6 rounded-2xl text-sm border-red-200 text-red-600 hover:bg-red-50"
                       >
-                        <Square className="w-5 h-5 text-modern-violet-600" />
+                        <Square className="w-5 h-5 text-red-500" />
                       </Button>
                     )}
                   </div>
