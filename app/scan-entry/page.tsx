@@ -7,10 +7,11 @@ import { Input } from '@/components/ui/input';
 import { Camera, CheckCircle, XCircle, Type, Square } from 'lucide-react';
 import toast from 'react-hot-toast';
 import LoadingSpinner from '@/components/LoadingSpinner';
-import ControlledQRScanner from '@/components/ControlledQRScanner';
+// import ControlledQRScanner from '@/components/ControlledQRScanner';
 import QuickStats from '@/components/QuickStats';
 import EntryRoute from '@/components/EntryRoute';
 import { cn } from '@/lib/utils';
+import SpecialPWAScannerTest from '@/components/SpecialPWAScannerTest';
 
 type ScanResult = 'success' | 'already-used' | 'invalid' | null;
 
@@ -23,6 +24,7 @@ export default function ScanEntry() {
   const [isClient, setIsClient] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [stream, setStream] = useState<MediaStream | null>(null);
   
   // Refs
   const scanAreaRef = useRef<HTMLDivElement>(null);
@@ -180,15 +182,27 @@ export default function ScanEntry() {
   }, []);
 
   // Handlers pour contrôler le scanner
-  const startCamera = useCallback(() => {
+  const startCamera = useCallback(async () => {
     console.log('📷 Démarrage du scanner...');
-    if (!processingRef.current && !scanResult) {
-      setIsScanning(true);
-      setShowManualInput(false); // Fermer la saisie manuelle
-    } else {
+    if (processingRef.current || scanResult) {
       console.log('⚠️ Scanner non disponible');
+      return;
+    }
+  
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: 'environment' } }
+      });
+  
+      setStream(stream);
+      setIsScanning(true);
+      setShowManualInput(false);
+    } catch (err) {
+      console.error('Erreur d’accès à la caméra', err);
+      toast.error("Impossible d'accéder à la caméra.");
     }
   }, [scanResult]);
+  
 
   const stopCamera = useCallback(() => {
     console.log('🛑 Arrêt du scanner...');
@@ -242,7 +256,16 @@ export default function ScanEntry() {
               {/* Scanner QR - Toujours rendu mais masqué quand il y a un résultat */}
               {isScanning && !scanResult && (
                 <div className="absolute inset-0">
-                  <ControlledQRScanner
+                  {/* <ControlledQRScanner
+                     stream={stream}
+                    onScanSuccess={handleQRScanSuccess}
+                    onScanError={handleQRScanError}
+                    isActive
+                    onScannerReady={handleScannerReady}
+                    onScannerError={handleScannerError}
+                  /> */}
+                  <SpecialPWAScannerTest
+                    stream={stream}
                     onScanSuccess={handleQRScanSuccess}
                     onScanError={handleQRScanError}
                     isActive
