@@ -1,0 +1,29 @@
+<svg width="100" height="100" viewBox="0 0 100 100" fill="none" xmlns="[http://www.w3.org/2000/svg](http://www.w3.org/2000/svg)">
+  <rect width="100" height="100" fill="#FFFFFF"/>
+
+  <rect x="5" y="5" width="20" height="20" fill="#333333"/>
+  <rect x="8" y="8" width="14" height="14" fill="#FFFFFF"/>
+  <rect x="11" y="11" width="8" height="8" fill="#333333"/>
+
+  <rect x="75" y="5" width="20" height="20" fill="#333333"/>
+  <rect x="78" y="8" width="14" height="14" fill="#FFFFFF"/>
+  <rect x="81" y="11" width="8" height="8" fill="#333333"/>
+
+  <rect x="5" y="75" width="20" height="20" fill="#333333"/>
+  <rect x="8" y="78" width="14" height="14" fill="#FFFFFF"/>
+  <rect x="11" y="81" width="8" height="8" fill="#333333"/>
+
+  <rect x="30" y="30" width="5" height="5" fill="#333333"/>
+  <rect x="38" y="30" width="5" height="5" fill="#333333"/>
+  <rect x="46" y="30" width="5" height="5" fill="#333333"/>
+  <rect x="54" y="30" width="5" height="5" fill="#333333"/>
+  <rect x="62" y="30" width="5" height="5" fill="#333333"/>
+
+  <rect x="30" y="38" width="5" height="5" fill="#333333"/>
+  <rect x="38" y="38" width="5" height="5" fill="#333333"/>
+  <rect x="46" y="38" width="5" height="5" fill="#333333"/>
+  <rect x="54" y="38" width="5" height="5" fill="#333333"/>
+  <rect x="62" y="38" width="5" height="5" fill="#333333"/>
+
+  <text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-family="Arial, sans-serif" font-size="45" font-weight="bold" fill="#000000">AT</text>
+</svg>

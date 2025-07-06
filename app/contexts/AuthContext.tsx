@@ -6,13 +6,15 @@ interface User {
   id: string;
   email: string;
   name: string;
+  role: 'admin' | 'user';
 }
 
 interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (email: string, password: string) => Promise<boolean>;
+  isAdmin: boolean;
+  login: (email: string, password: string) => Promise<{ success: boolean; role?: 'admin' | 'user' }>;
   logout: () => void;
 }
 
@@ -24,6 +26,24 @@ export const useAuth = () => {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
+};
+
+// Configuration des utilisateurs (en production, cela devrait être dans une base de données)
+const USERS = {
+  'admin@festival.com': {
+    id: '1',
+    email: 'admin@festival.com',
+    name: 'Administrateur Festival',
+    role: 'admin' as const,
+    password: 'admin123' // En production, utiliser des hash bcrypt
+  },
+  'user@festival.com': {
+    id: '2',
+    email: 'user@festival.com',
+    name: 'Utilisateur Festival',
+    role: 'user' as const,
+    password: 'user123'
+  }
 };
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -39,8 +59,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const savedUser = localStorage.getItem('festival-user');
         if (savedUser) {
           const parsedUser = JSON.parse(savedUser);
-          setUser(parsedUser);
-          setIsAuthenticated(true);
+          // Vérifier que l'utilisateur existe toujours dans la configuration
+          if (USERS[parsedUser.email as keyof typeof USERS]) {
+            setUser(parsedUser);
+            setIsAuthenticated(true);
+          } else {
+            // Utilisateur supprimé de la configuration, déconnecter
+            localStorage.removeItem('festival-user');
+          }
         }
       } catch (error) {
         console.error('Error parsing saved user:', error);
@@ -53,18 +79,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, []);
 
-  const login = async (email: string, password: string): Promise<boolean> => {
+  const login = async (email: string, password: string): Promise<{ success: boolean; role?: 'admin' | 'user' }> => {
     try {
       setIsLoading(true);
       
       // Simulate API call with delay
       await new Promise(resolve => setTimeout(resolve, 1000));
       
-      if (email === 'admin@festival.com' && password === 'admin123') {
+      const userConfig = USERS[email as keyof typeof USERS];
+      
+      if (userConfig && userConfig.password === password) {
         const newUser = {
-          id: '1',
-          email: 'admin@festival.com',
-          name: 'Administrateur Festival'
+          id: userConfig.id,
+          email: userConfig.email,
+          name: userConfig.name,
+          role: userConfig.role
         };
         
         setUser(newUser);
@@ -75,13 +104,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           localStorage.setItem('festival-user', JSON.stringify(newUser));
         }
         
-        return true;
+        return { success: true, role: userConfig.role };
       }
       
-      return false;
+      return { success: false };
     } catch (error) {
       console.error('Login error:', error);
-      return false;
+      return { success: false };
     } finally {
       setIsLoading(false);
     }
@@ -97,12 +126,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const isAdmin = user?.role === 'admin';
+
   return (
     <AuthContext.Provider 
       value={{ 
         user, 
         isAuthenticated, 
         isLoading, 
+        isAdmin,
         login, 
         logout 
       }}

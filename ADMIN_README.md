@@ -1,124 +1,147 @@
-# Page d'Administration - Import de Tickets
+# Guide Administrateur - AccessTicket
 
-## Accès
+## 🛡️ Système de Sécurité Implémenté
 
-La page d'administration est accessible via le menu de navigation en se connectant avec les identifiants admin :
+### Comptes Disponibles
+
+#### 👑 Administrateur
 - **Email** : `admin@festival.com`
 - **Mot de passe** : `admin123`
+- **Accès** : Toutes les fonctionnalités
+  - ✅ Import de tickets
+  - ✅ Statistiques avancées
+  - ✅ Historique complet
+  - ✅ Administration
+  - ✅ Scan d'entrée/sortie
+  - ✅ Saisie manuelle
 
-## Fonctionnalités
+#### 👤 Utilisateur Standard
+- **Email** : `user@festival.com`
+- **Mot de passe** : `user123`
+- **Accès** : Fonctionnalités limitées
+  - ✅ Scan d'entrée
+  - ✅ Scan de sortie
+  - ✅ Statistiques de base
+  - ❌ Import de tickets
+  - ❌ Historique
+  - ❌ Administration
 
-### 1. Import de Fichiers
+## 🔐 Fonctionnalités de Sécurité
 
-La page permet d'importer des tickets depuis des fichiers CSV ou Excel (.xlsx, .xls).
+### Protection des Routes
+- **Middleware Next.js** : Vérification automatique des permissions
+- **Composants de protection** : `AdminRoute`, `UserRoute`, `ScanRoute`
+- **Redirection automatique** : En cas d'accès non autorisé
 
-#### Formats de fichiers supportés :
-- **CSV** : Fichiers avec séparateur virgule
-- **Excel** : Fichiers .xlsx et .xls
+### Interface Sécurisée
+- **Navigation adaptative** : Menu différent selon le rôle
+- **Badges visuels** : Indicateurs de mode admin/utilisateur
+- **Masquage des fonctionnalités** : Seules les options autorisées sont visibles
 
-#### Colonnes requises :
-Le fichier doit contenir une colonne avec l'un de ces noms (insensible à la casse) :
-- `number`
-- `numero`
-- `ticket`
+### Validation des Permissions
+- **Côté client** : Vérification dans les composants React
+- **Côté serveur** : Middleware de protection
+- **Stockage sécurisé** : Vérification de l'intégrité des données
 
-#### Exemple de fichier CSV :
-```csv
-number,name,email
-TICKET001,John Doe,john@example.com
-TICKET002,Jane Smith,jane@example.com
-```
+## 🚀 Utilisation
 
-### 2. Gestion des Doublons
+### 1. Connexion
+1. Aller sur `/login`
+2. Choisir le type de compte (Admin ou Utilisateur)
+3. Les identifiants se remplissent automatiquement
+4. Cliquer sur "Se connecter"
 
-- Les tickets déjà existants dans la base de données sont automatiquement ignorés
-- Seuls les nouveaux tickets sont importés avec le statut `PENDING`
+### 2. Espace Administrateur
+- **URL** : `/admin`
+- **Accès** : Admin uniquement
+- **Fonctionnalités** :
+  - Import de fichiers CSV
+  - Statistiques détaillées
+  - Gestion complète du système
 
-### 3. Statistiques en Temps Réel
+### 3. Espace Utilisateur
+- **URL** : `/dashboard`
+- **Accès** : Tous les utilisateurs authentifiés
+- **Fonctionnalités** : Selon le rôle
 
-La page affiche les statistiques actuelles :
-- **Total Tickets** : Nombre total de tickets dans la base
-- **En Attente** : Tickets importés mais non utilisés
-- **Entrés** : Tickets validés en entrée
-- **Sortis** : Tickets validés en sortie
+### 4. Pages de Scan
+- **Scan Entrée** : `/scan-entry`
+- **Scan Sortie** : `/scan-exit`
+- **Accès** : Tous les utilisateurs authentifiés
 
-### 4. Logique de Ré-entrée
+## 🔧 Configuration
 
-Le système gère automatiquement la ré-entrée des tickets :
-- Un ticket avec le statut `EXITED` peut ré-entrer
-- Un ticket avec le statut `ENTERED` ne peut pas entrer à nouveau
-- Un ticket avec le statut `PENDING` ne peut pas sortir
-
-## Routes API
-
-### `/api/tickets/import` (POST)
-Importe une liste de numéros de tickets.
-
-**Body :**
-```json
-{
-  "tickets": ["TICKET001", "TICKET002", "TICKET003"]
+### Ajouter un Nouvel Utilisateur
+1. Modifier `app/contexts/AuthContext.tsx`
+2. Ajouter dans l'objet `USERS` :
+```typescript
+'nouveau@email.com': {
+  id: '3',
+  email: 'nouveau@email.com',
+  name: 'Nouvel Utilisateur',
+  role: 'user', // ou 'admin'
+  password: 'motdepasse123'
 }
 ```
 
-**Response :**
-```json
-{
-  "success": true,
-  "imported": 2,
-  "duplicates": 1,
-  "total": 3
-}
+### Modifier les Permissions
+1. Ajuster les routes dans `middleware.ts`
+2. Modifier les composants de protection
+3. Mettre à jour la navigation dans `components/Navbar.tsx`
+
+### Personnaliser l'Interface
+- **Badges admin** : Modifier les couleurs dans les composants
+- **Messages d'erreur** : Personnaliser dans `AdminRoute.tsx` et `UserRoute.tsx`
+- **Navigation** : Ajuster dans `components/Navbar.tsx`
+
+## 🛠️ Maintenance
+
+### Vérification de Sécurité
+1. **Tester les redirections** :
+   - Utilisateur standard → `/admin` → redirection vers `/dashboard`
+   - Admin → pages utilisateur → redirection vers `/admin`
+   - Non authentifié → pages protégées → redirection vers `/login`
+
+2. **Vérifier les permissions** :
+   - Menu adaptatif selon le rôle
+   - Fonctionnalités masquées pour les utilisateurs non autorisés
+   - Badges visuels corrects
+
+3. **Tester la persistance** :
+   - Connexion/déconnexion
+   - Rechargement de page
+   - Données corrompues dans localStorage
+
+### Logs et Monitoring
+- **Console du navigateur** : Vérifier les erreurs de sécurité
+- **Network tab** : Surveiller les requêtes non autorisées
+- **LocalStorage** : Vérifier l'intégrité des données utilisateur
+
+## 🚨 Sécurité en Production
+
+### Recommandations Critiques
+1. **Remplacer les mots de passe en dur** par une base de données
+2. **Implémenter JWT** pour l'authentification
+3. **Ajouter HTTPS** en production
+4. **Configurer les en-têtes de sécurité**
+5. **Implémenter la journalisation des accès**
+
+### Variables d'Environnement
+```env
+# À configurer en production
+JWT_SECRET=votre_secret_jwt
+DATABASE_URL=votre_url_base_de_donnees
+NEXTAUTH_SECRET=votre_secret_nextauth
 ```
 
-### `/api/tickets/scan` (POST)
-Valide l'entrée ou la sortie d'un ticket.
+## 📞 Support
 
-**Body :**
-```json
-{
-  "ticketNumber": "TICKET001",
-  "action": "ENTER",
-  "entryType": "SCAN"
-}
-```
+En cas de problème :
+1. Vérifier les logs dans la console du navigateur
+2. Tester avec les comptes de démonstration
+3. Vérifier la configuration du middleware
+4. Consulter le fichier `SECURITY.md` pour plus de détails
 
-**Actions possibles :**
-- `ENTER` : Valider l'entrée
-- `EXIT` : Valider la sortie
+---
 
-### `/api/tickets/stats` (GET)
-Récupère les statistiques des tickets.
-
-**Response :**
-```json
-{
-  "total": 100,
-  "pending": 50,
-  "entered": 30,
-  "exited": 20,
-  "imported": 100,
-  "duplicates": 0
-}
-```
-
-## Sécurité
-
-- La page est protégée par l'authentification
-- Seuls les utilisateurs connectés peuvent accéder à l'administration
-- Redirection automatique vers la page de connexion si non authentifié
-
-## Utilisation
-
-1. Connectez-vous avec les identifiants admin
-2. Cliquez sur "Administration" dans le menu
-3. Glissez-déposez ou sélectionnez un fichier CSV/Excel
-4. Le système traite automatiquement le fichier
-5. Consultez les statistiques pour vérifier l'import
-
-## Gestion des Erreurs
-
-- **Fichier invalide** : Message d'erreur explicite
-- **Aucun ticket trouvé** : Vérification de la colonne "number"
-- **Erreur réseau** : Retry automatique
-- **Doublons** : Affichage du nombre de tickets ignorés 
+**⚠️ Important** : Ce système est conçu pour la démonstration. Pour la production, implémentez toutes les recommandations de sécurité mentionnées dans `SECURITY.md`. 

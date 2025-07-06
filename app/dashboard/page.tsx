@@ -2,7 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Users, UserCheck, UserX, Clock, TrendingUp } from 'lucide-react';
+import { Users, UserCheck, UserX, Clock, TrendingUp, Shield, User } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
 
 interface Stats {
   totalTickets: number;
@@ -21,6 +22,7 @@ interface Activity {
 }
 
 export default function Dashboard() {
+  const { isAdmin } = useAuth();
   const [stats, setStats] = useState<Stats>({
     totalTickets: 0,
     scannedIn: 0,
@@ -128,14 +130,30 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
+      {/* Header avec badge de rôle */}
       <div className="mb-8">
+        <div className="flex items-center gap-3 mb-4">
+          {isAdmin ? (
+            <div className="flex items-center gap-2 bg-red-100 text-red-800 px-3 py-1 rounded-full text-sm font-medium">
+              <Shield className="w-4 h-4" />
+              Mode Administrateur
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium">
+              <User className="w-4 h-4" />
+              Mode Utilisateur
+            </div>
+          )}
+        </div>
         <h1 className="text-3xl font-bold text-gray-900 mb-2">
-          Statistiques Festival
+          {isAdmin ? 'Tableau de Bord Administrateur' : 'Tableau de Bord Utilisateur'}
         </h1>
-        <p className="text-gray-600">
-          Vue d&apos;ensemble en temps réel du contrôle d&apos;accès
-        </p>
+                  <p className="text-gray-600">
+            {isAdmin 
+              ? 'Vue d&apos;ensemble complète du contrôle d&apos;accès avec toutes les fonctionnalités'
+              : 'Vue d&apos;ensemble simplifiée pour le contrôle d&apos;accès'
+            }
+          </p>
       </div>
 
       {/* Stats Grid */}
@@ -177,88 +195,137 @@ export default function Dashboard() {
         />
       </div>
 
-      {/* Live Activity */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* Live Activity - seulement pour les admins */}
+      {isAdmin && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <Card className="festival-card">
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <Clock className="w-5 h-5 mr-2 text-festival-blue" />
+                Activité en temps réel
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {activity.length > 0 ? (
+                  activity.map((item) => (
+                    <div
+                      key={item.id}
+                      className={`flex items-center justify-between p-3 rounded-lg ${
+                        item.action === 'ENTER' ? 'bg-green-50' : 'bg-blue-50'
+                      }`}
+                    >
+                      <div className="flex items-center">
+                        <div
+                          className={`w-2 h-2 rounded-full mr-3 ${
+                            item.action === 'ENTER' ? 'bg-green-500' : 'bg-blue-500'
+                          }`}
+                        />
+                        <div>
+                          <p className="font-medium text-gray-900">
+                            Ticket #{item.ticketNumber}
+                          </p>
+                          <p className="text-sm text-gray-500">
+                            {item.action === 'ENTER' ? 'Entrée' : 'Sortie'} - {item.timeAgo}
+                          </p>
+                        </div>
+                      </div>
+                      <span
+                        className={`text-xs font-medium px-2 py-1 rounded-full ${
+                          item.action === 'ENTER'
+                            ? 'bg-green-100 text-green-800'
+                            : 'bg-blue-100 text-blue-800'
+                        }`}
+                      >
+                        {item.action === 'ENTER' ? 'ENTRÉE' : 'SORTIE'}
+                      </span>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center py-8 text-gray-500">
+                    <Clock className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+                    <p>Aucune activité récente</p>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="festival-card">
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <TrendingUp className="w-5 h-5 mr-2 text-festival-blue" />
+                Actions rapides
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                <button className="w-full text-left p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors">
+                  <div className="flex items-center">
+                    <Users className="w-5 h-5 mr-3 text-blue-600" />
+                    <div>
+                      <p className="font-medium text-gray-900">Gérer les tickets</p>
+                      <p className="text-sm text-gray-500">Import et gestion des billets</p>
+                    </div>
+                  </div>
+                </button>
+                <button className="w-full text-left p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors">
+                  <div className="flex items-center">
+                    <Clock className="w-5 h-5 mr-3 text-green-600" />
+                    <div>
+                      <p className="font-medium text-gray-900">Voir l&apos;historique</p>
+                      <p className="text-sm text-gray-500">Toutes les activités passées</p>
+                    </div>
+                  </div>
+                </button>
+                <button className="w-full text-left p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors">
+                  <div className="flex items-center">
+                    <Shield className="w-5 h-5 mr-3 text-red-600" />
+                    <div>
+                      <p className="font-medium text-gray-900">Administration</p>
+                      <p className="text-sm text-gray-500">Paramètres avancés</p>
+                    </div>
+                  </div>
+                </button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Actions rapides pour les utilisateurs */}
+      {!isAdmin && (
         <Card className="festival-card">
           <CardHeader>
             <CardTitle className="flex items-center">
-              <Clock className="w-5 h-5 mr-2 text-festival-blue" />
-              Activité en temps réel
+              <User className="w-5 h-5 mr-2 text-festival-blue" />
+              Actions rapides
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {activity.length > 0 ? (
-                activity.map((item) => (
-                  <div
-                    key={item.id}
-                    className={`flex items-center justify-between p-3 rounded-lg ${
-                      item.action === 'ENTER' ? 'bg-green-50' : 'bg-blue-50'
-                    }`}
-                  >
-                    <div className="flex items-center">
-                      <div
-                        className={`w-3 h-3 rounded-full mr-3 animate-pulse ${
-                          item.action === 'ENTER' ? 'bg-green-500' : 'bg-blue-500'
-                        }`}
-                      ></div>
-                      <span className="text-sm font-medium">
-                        {item.action === 'ENTER' ? 'Entrée validée' : 'Sortie validée'}
-                      </span>
-                      <span className="text-sm text-gray-500 ml-2">
-                        #{item.ticketNumber}
-                      </span>
-                    </div>
-                    <span className="text-sm text-gray-500">{item.timeAgo}</span>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <button className="text-left p-4 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors">
+                <div className="flex items-center">
+                  <UserCheck className="w-6 h-6 mr-3 text-green-600" />
+                  <div>
+                    <p className="font-medium text-gray-900">Scanner Entrée</p>
+                    <p className="text-sm text-gray-500">Valider l&apos;entrée des visiteurs</p>
                   </div>
-                ))
-              ) : (
-                <div className="text-center text-gray-500 py-4">
-                  Aucune activité récente
                 </div>
-              )}
+              </button>
+              <button className="text-left p-4 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors">
+                <div className="flex items-center">
+                  <UserX className="w-6 h-6 mr-3 text-red-600" />
+                  <div>
+                    <p className="font-medium text-gray-900">Scanner Sortie</p>
+                    <p className="text-sm text-gray-500">Enregistrer la sortie des visiteurs</p>
+                  </div>
+                </div>
+              </button>
             </div>
           </CardContent>
         </Card>
-
-        <Card className="festival-card">
-          <CardHeader>
-            <CardTitle>Taux d&apos;occupation</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">Taux d&apos;utilisation</span>
-                <span className="text-sm font-medium">
-                  {stats.totalTickets > 0 ? Math.round(((stats.scannedIn + stats.scannedOut) / stats.totalTickets) * 100) : 0}%
-                </span>
-              </div>
-              <div className="w-full bg-gray-200 rounded-full h-3">
-                <div 
-                  className="bg-festival-blue h-3 rounded-full transition-all duration-500"
-                  style={{ 
-                    width: `${stats.totalTickets > 0 ? Math.min(((stats.scannedIn + stats.scannedOut) / stats.totalTickets) * 100, 100) : 0}%` 
-                  }}
-                ></div>
-              </div>
-              <div className="grid grid-cols-2 gap-4 pt-4">
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-festival-success">
-                    {stats.scannedIn}
-                  </div>
-                  <div className="text-sm text-gray-500">Entrées</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-festival-danger">
-                    {stats.scannedOut}
-                  </div>
-                  <div className="text-sm text-gray-500">Sorties</div>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      )}
     </div>
   );
 }

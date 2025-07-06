@@ -1,16 +1,15 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useRouter } from 'next/navigation';
+
 import { useAuth } from '@/app/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { ScanLine, Eye, EyeOff } from 'lucide-react';
+import { ScanLine, Eye, EyeOff, Shield, User } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export default function Login() {
-  const router = useRouter();
   const { login } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -22,10 +21,15 @@ export default function Login() {
     setIsLoading(true);
 
     try {
-      const success = await login(email, password);
-      if (success) {
+      const result = await login(email, password);
+      if (result.success) {
+        // Déterminer la page de redirection selon le rôle
+        const redirectPath = result.role === 'admin' ? '/admin' : '/dashboard';
+        
         toast.success("Connexion réussie - Bienvenue dans le système de contrôle d'accès !");
-        router.push('/dashboard');
+        
+        // Forcer la redirection immédiatement
+        window.location.href = redirectPath;
       } else {
         toast.error("Email ou mot de passe incorrect");
       }
@@ -34,6 +38,16 @@ export default function Login() {
       toast.error("Une erreur est survenue lors de la connexion");
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const fillCredentials = (type: 'admin' | 'user') => {
+    if (type === 'admin') {
+      setEmail('admin@festival.com');
+      setPassword('admin123');
+    } else {
+      setEmail('user@festival.com');
+      setPassword('user123');
     }
   };
 
@@ -67,7 +81,7 @@ export default function Login() {
           <div>
             <h2 className="text-3xl font-bold text-gray-900 mb-2">Connexion</h2>
             <p className="text-gray-600 mb-8">
-              Connectez-vous à votre compte administrateur
+              Connectez-vous à votre compte
             </p>
           </div>
 
@@ -130,10 +144,57 @@ export default function Login() {
             </div>
           </form>
 
-          <div className="mt-8 p-4 bg-blue-50 rounded-lg">
-            <p className="text-sm text-blue-800 font-medium mb-2">Compte de démonstration :</p>
-            <p className="text-sm text-blue-600">Email: admin@festival.com</p>
-            <p className="text-sm text-blue-600">Mot de passe: admin123</p>
+          {/* Comptes de démonstration */}
+          <div className="mt-8 space-y-4">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Comptes de démonstration :</h3>
+            
+            {/* Compte Admin */}
+            <div className="p-4 bg-red-50 rounded-lg border border-red-200">
+              <div className="flex items-center mb-2">
+                <Shield className="w-5 h-5 text-red-600 mr-2" />
+                <span className="font-medium text-red-800">Administrateur</span>
+              </div>
+              <p className="text-sm text-red-700 mb-3">
+                Accès complet : import, statistiques, historique, administration
+              </p>
+              <div className="space-y-1 text-sm text-red-600">
+                <p>Email: admin@festival.com</p>
+                <p>Mot de passe: admin123</p>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => fillCredentials('admin')}
+                className="mt-3 w-full border-red-300 text-red-700 hover:bg-red-100"
+              >
+                Utiliser ce compte
+              </Button>
+            </div>
+
+            {/* Compte User */}
+            <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+              <div className="flex items-center mb-2">
+                <User className="w-5 h-5 text-blue-600 mr-2" />
+                <span className="font-medium text-blue-800">Utilisateur</span>
+              </div>
+              <p className="text-sm text-blue-700 mb-3">
+                Accès limité : scan d&apos;entrée et de sortie uniquement
+              </p>
+              <div className="space-y-1 text-sm text-blue-600">
+                <p>Email: user@festival.com</p>
+                <p>Mot de passe: user123</p>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => fillCredentials('user')}
+                className="mt-3 w-full border-blue-300 text-blue-700 hover:bg-blue-100"
+              >
+                Utiliser ce compte
+              </Button>
+            </div>
           </div>
         </div>
       </div>

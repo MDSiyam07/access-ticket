@@ -1,34 +1,30 @@
 'use client';
 
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import { useAuth } from './contexts/AuthContext';
+import { useEffect } from 'react';
 
-export default function Home() {
-  const { isAuthenticated, isLoading } = useAuth();
-  const router = useRouter();
+export default function HomePage() {
+  const { isAuthenticated, isAdmin, isLoading } = useAuth();
 
   useEffect(() => {
     if (!isLoading) {
-      if (isAuthenticated) {
-        router.push('/scan-entry');
+      if (!isAuthenticated) {
+        window.location.href = '/login';
       } else {
-        router.push('/login');
+        // Rediriger vers la page appropriée selon le rôle
+        const redirectPath = isAdmin ? '/admin' : '/dashboard';
+        window.location.href = redirectPath;
       }
     }
-  }, [isAuthenticated, isLoading, router]);
+  }, [isAuthenticated, isAdmin, isLoading]);
 
-  // Affichage de chargement pendant la vérification
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Chargement...</p>
-        </div>
+  // Afficher un loader pendant la vérification
+  return (
+    <div className="min-h-screen flex items-center justify-center">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+        <p className="mt-4 text-gray-600">Redirection...</p>
       </div>
-    );
-  }
-
-  return null;
+    </div>
+  );
 }
