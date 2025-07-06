@@ -6,7 +6,7 @@ import { useAuth } from '@/app/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { ScanLine, Eye, EyeOff, Shield, User } from 'lucide-react';
+import { ScanLine, Eye, EyeOff, Shield, LogIn, LogOut, RefreshCw } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export default function Login() {
@@ -24,7 +24,16 @@ export default function Login() {
       const result = await login(email, password);
       if (result.success) {
         // Déterminer la page de redirection selon le rôle
-        const redirectPath = result.role === 'admin' ? '/admin' : '/dashboard';
+        let redirectPath = '/dashboard';
+        if (result.role === 'admin') {
+          redirectPath = '/admin';
+        } else if (result.role === 'entry') {
+          redirectPath = '/scan-entry';
+        } else if (result.role === 'exit') {
+          redirectPath = '/scan-exit';
+        } else if (result.role === 'reentry') {
+          redirectPath = '/scan-exit'; // Pour les ré-entrées, on utilise la page de sortie
+        }
         
         toast.success("Connexion réussie - Bienvenue dans le système de contrôle d'accès !");
         
@@ -41,13 +50,19 @@ export default function Login() {
     }
   };
 
-  const fillCredentials = (type: 'admin' | 'user') => {
+  const fillCredentials = (type: 'admin' | 'entry' | 'exit' | 'reentry') => {
     if (type === 'admin') {
       setEmail('admin@festival.com');
       setPassword('admin123');
-    } else {
-      setEmail('user@festival.com');
-      setPassword('user123');
+    } else if (type === 'entry') {
+      setEmail('entry@festival.com');
+      setPassword('entry123');
+    } else if (type === 'exit') {
+      setEmail('exit@festival.com');
+      setPassword('exit123');
+    } else if (type === 'reentry') {
+      setEmail('reentry@festival.com');
+      setPassword('reentry123');
     }
   };
 
@@ -88,7 +103,7 @@ export default function Login() {
             <div>
               <h2 className="text-3xl font-bold text-foreground mb-2">Connexion</h2>
               <p className="text-muted-foreground mb-8">
-                Connectez-vous à votre compte
+                Connectez-vous à votre compte spécialisé
               </p>
             </div>
 
@@ -152,9 +167,9 @@ export default function Login() {
             </form>
           </div>
 
-          {/* Comptes de démonstration */}
+          {/* Comptes spécialisés */}
           <div className="mt-8 space-y-4">
-            <h3 className="text-lg font-semibold text-foreground mb-4">Comptes de démonstration :</h3>
+            <h3 className="text-lg font-semibold text-foreground mb-4">Comptes spécialisés :</h3>
             
             {/* Compte Admin */}
             <div className="glass-card p-6 border-l-4 border-l-modern-violet-500">
@@ -180,25 +195,73 @@ export default function Login() {
               </Button>
             </div>
 
-            {/* Compte User */}
+            {/* Compte Entrées */}
             <div className="glass-card p-6 border-l-4 border-l-modern-cyan-500">
               <div className="flex items-center mb-3">
-                <User className="w-5 h-5 text-modern-cyan-600 mr-2" />
-                <span className="font-medium text-modern-cyan-800">Utilisateur</span>
+                <LogIn className="w-5 h-5 text-modern-cyan-600 mr-2" />
+                <span className="font-medium text-modern-cyan-800">Contrôleur Entrées</span>
               </div>
               <p className="text-sm text-muted-foreground mb-3">
-                Accès limité : scan d&apos;entrée et de sortie uniquement
+                Accès : scan d&apos;entrée uniquement
               </p>
               <div className="space-y-1 text-sm text-modern-cyan-600">
-                <p>Email: user@festival.com</p>
-                <p>Mot de passe: user123</p>
+                <p>Email: entry@festival.com</p>
+                <p>Mot de passe: entry123</p>
               </div>
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={() => fillCredentials('user')}
+                onClick={() => fillCredentials('entry')}
                 className="mt-3 w-full border-modern-cyan-300 text-modern-cyan-700 hover:bg-modern-cyan-50 rounded-2xl"
+              >
+                Utiliser ce compte
+              </Button>
+            </div>
+
+            {/* Compte Sorties */}
+            <div className="glass-card p-6 border-l-4 border-l-modern-gold-500">
+              <div className="flex items-center mb-3">
+                <LogOut className="w-5 h-5 text-modern-gold-600 mr-2" />
+                <span className="font-medium text-modern-gold-800">Contrôleur Sorties</span>
+              </div>
+              <p className="text-sm text-muted-foreground mb-3">
+                Accès : scan de sortie uniquement
+              </p>
+              <div className="space-y-1 text-sm text-modern-gold-600">
+                <p>Email: exit@festival.com</p>
+                <p>Mot de passe: exit123</p>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => fillCredentials('exit')}
+                className="mt-3 w-full border-modern-gold-300 text-modern-gold-700 hover:bg-modern-gold-50 rounded-2xl"
+              >
+                Utiliser ce compte
+              </Button>
+            </div>
+
+            {/* Compte Ré-entrées */}
+            <div className="glass-card p-6 border-l-4 border-l-modern-green-500">
+              <div className="flex items-center mb-3">
+                <RefreshCw className="w-5 h-5 text-modern-green-600 mr-2" />
+                <span className="font-medium text-modern-green-800">Contrôleur Ré-entrées</span>
+              </div>
+              <p className="text-sm text-muted-foreground mb-3">
+                Accès : gestion des ré-entrées (sorties et ré-entrées)
+              </p>
+              <div className="space-y-1 text-sm text-modern-green-600">
+                <p>Email: reentry@festival.com</p>
+                <p>Mot de passe: reentry123</p>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => fillCredentials('reentry')}
+                className="mt-3 w-full border-modern-green-300 text-modern-green-700 hover:bg-modern-green-50 rounded-2xl"
               >
                 Utiliser ce compte
               </Button>

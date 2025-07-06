@@ -4,7 +4,7 @@ import { useAuth } from './contexts/AuthContext';
 import { useEffect } from 'react';
 
 export default function HomePage() {
-  const { isAuthenticated, isAdmin, isLoading } = useAuth();
+  const { isAuthenticated, isAdmin, isEntryUser, isExitUser, isReentryUser, isLoading } = useAuth();
 
   useEffect(() => {
     if (!isLoading) {
@@ -12,11 +12,20 @@ export default function HomePage() {
         window.location.href = '/login';
       } else {
         // Rediriger vers la page appropriée selon le rôle
-        const redirectPath = isAdmin ? '/admin' : '/dashboard';
+        let redirectPath = '/dashboard';
+        if (isAdmin) {
+          redirectPath = '/admin';
+        } else if (isEntryUser) {
+          redirectPath = '/scan-entry';
+        } else if (isExitUser) {
+          redirectPath = '/scan-exit';
+        } else if (isReentryUser) {
+          redirectPath = '/scan-exit'; // Pour les ré-entrées, on utilise la page de sortie
+        }
         window.location.href = redirectPath;
       }
     }
-  }, [isAuthenticated, isAdmin, isLoading]);
+  }, [isAuthenticated, isAdmin, isEntryUser, isExitUser, isReentryUser, isLoading]);
 
   // Afficher un loader pendant la vérification
   return (

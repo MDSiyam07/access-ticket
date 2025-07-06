@@ -6,7 +6,7 @@ interface User {
   id: string;
   email: string;
   name: string;
-  role: 'admin' | 'user';
+  role: 'admin' | 'entry' | 'exit' | 'reentry';
 }
 
 interface AuthContextType {
@@ -14,7 +14,10 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   isAdmin: boolean;
-  login: (email: string, password: string) => Promise<{ success: boolean; role?: 'admin' | 'user' }>;
+  isEntryUser: boolean;
+  isExitUser: boolean;
+  isReentryUser: boolean;
+  login: (email: string, password: string) => Promise<{ success: boolean; role?: 'admin' | 'entry' | 'exit' | 'reentry' }>;
   logout: () => void;
 }
 
@@ -28,7 +31,7 @@ export const useAuth = () => {
   return context;
 };
 
-// Configuration des utilisateurs (en production, cela devrait être dans une base de données)
+// Configuration des utilisateurs spécialisés (en production, cela devrait être dans une base de données)
 const USERS = {
   'admin@festival.com': {
     id: '1',
@@ -37,12 +40,26 @@ const USERS = {
     role: 'admin' as const,
     password: 'admin123' // En production, utiliser des hash bcrypt
   },
-  'user@festival.com': {
+  'entry@festival.com': {
     id: '2',
-    email: 'user@festival.com',
-    name: 'Utilisateur Festival',
-    role: 'user' as const,
-    password: 'user123'
+    email: 'entry@festival.com',
+    name: 'Contrôleur Entrées',
+    role: 'entry' as const,
+    password: 'entry123'
+  },
+  'exit@festival.com': {
+    id: '3',
+    email: 'exit@festival.com',
+    name: 'Contrôleur Sorties',
+    role: 'exit' as const,
+    password: 'exit123'
+  },
+  'reentry@festival.com': {
+    id: '4',
+    email: 'reentry@festival.com',
+    name: 'Contrôleur Ré-entrées',
+    role: 'reentry' as const,
+    password: 'reentry123'
   }
 };
 
@@ -79,7 +96,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, []);
 
-  const login = async (email: string, password: string): Promise<{ success: boolean; role?: 'admin' | 'user' }> => {
+  const login = async (email: string, password: string): Promise<{ success: boolean; role?: 'admin' | 'entry' | 'exit' | 'reentry' }> => {
     try {
       setIsLoading(true);
       
@@ -127,6 +144,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const isAdmin = user?.role === 'admin';
+  const isEntryUser = user?.role === 'entry';
+  const isExitUser = user?.role === 'exit';
+  const isReentryUser = user?.role === 'reentry';
 
   return (
     <AuthContext.Provider 
@@ -135,6 +155,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isAuthenticated, 
         isLoading, 
         isAdmin,
+        isEntryUser,
+        isExitUser,
+        isReentryUser,
         login, 
         logout 
       }}

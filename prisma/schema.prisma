@@ -18,6 +18,8 @@ model User {
   id        String   @id @default(cuid())
   email     String   @unique
   password  String
+  name      String
+  role      UserRole @default(ENTRY)
   createdAt DateTime @default(now())
 }
 
@@ -54,4 +56,11 @@ enum EntryType {
 enum Action {
   ENTER
   EXIT
+}
+
+enum UserRole {
+  ADMIN
+  ENTRY
+  EXIT
+  REENTRY
 }

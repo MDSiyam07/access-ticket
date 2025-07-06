@@ -14,7 +14,9 @@ import {
   X,
   Users,
   Settings,
-  Shield
+  LogIn,
+  LogOut,
+  RefreshCw
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -23,7 +25,7 @@ interface NavbarProps {
 }
 
 export default function Navbar({ children }: NavbarProps) {
-  const { user, logout, isAuthenticated, isLoading, isAdmin } = useAuth();
+  const { user, logout, isAuthenticated, isLoading, isAdmin, isEntryUser, isExitUser, isReentryUser } = useAuth();
   const pathname = usePathname();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -61,22 +63,37 @@ export default function Navbar({ children }: NavbarProps) {
 
   // Navigation items based on user role
   const getNavigationItems = () => {
-    const baseItems = [
-      { name: 'Statistiques', href: '/dashboard', icon: BarChart3 },
-      { name: 'Scan Entrée', href: '/scan-entry', icon: ScanLine },
-      { name: 'Scan Sortie', href: '/scan-exit', icon: Users },
-    ];
-
     if (isAdmin) {
       return [
-        ...baseItems,
+        { name: 'Statistiques', href: '/dashboard', icon: BarChart3 },
+        { name: 'Scan Entrée', href: '/scan-entry', icon: ScanLine },
+        { name: 'Scan Sortie', href: '/scan-exit', icon: Users },
         { name: 'Historique', href: '/history', icon: History },
         { name: 'Saisie Manuelle', href: '/manual-entry', icon: Edit3 },
         { name: 'Administration', href: '/admin', icon: Settings },
       ];
+    } else if (isEntryUser) {
+      return [
+        { name: 'Statistiques', href: '/dashboard', icon: BarChart3 },
+        { name: 'Scan Entrée', href: '/scan-entry', icon: LogIn },
+        { name: 'Saisie Manuelle', href: '/manual-entry', icon: Edit3 },
+      ];
+    } else if (isExitUser) {
+      return [
+        { name: 'Statistiques', href: '/dashboard', icon: BarChart3 },
+        { name: 'Scan Sortie', href: '/scan-exit', icon: LogOut },
+        { name: 'Saisie Manuelle', href: '/manual-entry', icon: Edit3 },
+      ];
+    } else if (isReentryUser) {
+      return [
+        { name: 'Statistiques', href: '/dashboard', icon: BarChart3 },
+        { name: 'Scan Sortie', href: '/scan-exit', icon: LogOut },
+        { name: 'Ré-entrées', href: '/scan-entry', icon: RefreshCw },
+        { name: 'Saisie Manuelle', href: '/manual-entry', icon: Edit3 },
+      ];
     }
 
-    return baseItems;
+    return [];
   };
 
   const navigation = getNavigationItems();
@@ -101,6 +118,22 @@ export default function Navbar({ children }: NavbarProps) {
     e.stopPropagation();
   };
 
+  const getUserRoleDisplay = () => {
+    if (isAdmin) return 'Administrateur';
+    if (isEntryUser) return 'Contrôleur Entrées';
+    if (isExitUser) return 'Contrôleur Sorties';
+    if (isReentryUser) return 'Contrôleur Ré-entrées';
+    return 'Utilisateur';
+  };
+
+  const getRoleColor = () => {
+    if (isAdmin) return 'text-modern-violet-600';
+    if (isEntryUser) return 'text-modern-cyan-600';
+    if (isExitUser) return 'text-modern-gold-600';
+    if (isReentryUser) return 'text-modern-green-600';
+    return 'text-gray-600';
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-modern-violet-50 via-modern-cyan-50 to-modern-violet-100">
       {/* Mobile menu button */}
@@ -111,12 +144,10 @@ export default function Navbar({ children }: NavbarProps) {
               <ScanLine className="w-6 h-6 text-modern-violet-600" />
             </div>
             <span className="ml-3 text-lg font-semibold gradient-text">AccessTicket</span>
-            {isAdmin && (
-              <div className="ml-3 flex items-center gap-1 bg-modern-violet-100 text-modern-violet-800 px-3 py-1 rounded-2xl text-xs font-medium border border-modern-violet-200">
-                <Shield className="w-3 h-3" />
-                Admin
-              </div>
-            )}
+            <div className="ml-3 flex items-center gap-1 bg-modern-violet-100 text-modern-violet-800 px-3 py-1 rounded-2xl text-xs font-medium border border-modern-violet-200">
+              <span className={`w-2 h-2 rounded-full ${getRoleColor().replace('text-', 'bg-')}`}></span>
+              {getUserRoleDisplay()}
+            </div>
           </div>
           <Button
             variant="ghost"
@@ -147,12 +178,10 @@ export default function Navbar({ children }: NavbarProps) {
                   <ScanLine className="w-6 h-6 text-modern-violet-600" />
                 </div>
                 <span className="ml-3 text-lg font-semibold gradient-text">AccessTicket</span>
-                {isAdmin && (
-                  <div className="ml-3 flex items-center gap-1 bg-modern-violet-100 text-modern-violet-800 px-3 py-1 rounded-2xl text-xs font-medium border border-modern-violet-200">
-                    <Shield className="w-3 h-3" />
-                    Admin
-                  </div>
-                )}
+                <div className="ml-3 flex items-center gap-1 bg-modern-violet-100 text-modern-violet-800 px-3 py-1 rounded-2xl text-xs font-medium border border-modern-violet-200">
+                  <span className={`w-2 h-2 rounded-full ${getRoleColor().replace('text-', 'bg-')}`}></span>
+                  {getUserRoleDisplay()}
+                </div>
               </div>
 
               {/* Navigation */}
@@ -188,9 +217,7 @@ export default function Navbar({ children }: NavbarProps) {
                   <div className="ml-3">
                     <p className="text-sm font-medium text-foreground">{user?.name}</p>
                     <p className="text-xs text-muted-foreground">{user?.email}</p>
-                    {isAdmin && (
-                      <p className="text-xs text-modern-violet-600 font-medium">Administrateur</p>
-                    )}
+                    <p className={`text-xs font-medium ${getRoleColor()}`}>{getUserRoleDisplay()}</p>
                   </div>
                 </div>
                 <Button
@@ -219,12 +246,10 @@ export default function Navbar({ children }: NavbarProps) {
                   <ScanLine className="w-5 h-5 text-white" />
                 </div>
                 <span className="ml-3 text-xl font-semibold text-gray-900">AccessTicket</span>
-                {isAdmin && (
-                  <div className="ml-2 flex items-center gap-1 bg-red-100 text-red-800 px-2 py-1 rounded-full text-xs font-medium">
-                    <Shield className="w-3 h-3" />
-                    Admin
-                  </div>
-                )}
+                <div className="ml-2 flex items-center gap-1 bg-modern-violet-100 text-modern-violet-800 px-2 py-1 rounded-full text-xs font-medium border border-modern-violet-200">
+                  <span className={`w-2 h-2 rounded-full ${getRoleColor().replace('text-', 'bg-')}`}></span>
+                  {getUserRoleDisplay()}
+                </div>
               </div>
 
               {/* Navigation */}
@@ -248,33 +273,31 @@ export default function Navbar({ children }: NavbarProps) {
                     );
                   })}
                 </nav>
+              </div>
 
-                {/* User info and logout */}
-                <div className="border-t border-gray-200 p-4">
-                  <div className="flex items-center mb-3">
-                    <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">
-                      <span className="text-sm font-medium text-gray-600">
-                        {user?.name?.charAt(0) || 'A'}
-                      </span>
-                    </div>
-                    <div className="ml-3">
-                      <p className="text-sm font-medium text-gray-900">{user?.name}</p>
-                      <p className="text-xs text-gray-500">{user?.email}</p>
-                      {isAdmin && (
-                        <p className="text-xs text-red-600 font-medium">Administrateur</p>
-                      )}
-                    </div>
+              {/* User info and logout */}
+              <div className="border-t border-gray-200 p-4">
+                <div className="flex items-center mb-3">
+                  <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">
+                    <span className="text-sm font-medium text-gray-600">
+                      {user?.name?.charAt(0) || 'A'}
+                    </span>
                   </div>
-                  <Button
-                    onClick={handleLogout}
-                    variant="outline"
-                    size="sm"
-                    className="w-full justify-start"
-                  >
-                    <LogOutIcon className="w-4 h-4 mr-2" />
-                    Déconnexion
-                  </Button>
+                  <div className="ml-3">
+                    <p className="text-sm font-medium text-gray-900">{user?.name}</p>
+                    <p className="text-xs text-gray-500">{user?.email}</p>
+                    <p className={`text-xs font-medium ${getRoleColor()}`}>{getUserRoleDisplay()}</p>
+                  </div>
                 </div>
+                <Button
+                  onClick={handleLogout}
+                  variant="outline"
+                  size="sm"
+                  className="w-full justify-start"
+                >
+                  <LogOutIcon className="w-4 h-4 mr-2" />
+                  Déconnexion
+                </Button>
               </div>
             </div>
           </div>

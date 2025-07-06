@@ -10,6 +10,10 @@
   "scope": "/",
   "lang": "fr",
   "categories": ["business", "productivity", "utilities"],
+  "ios": {
+    "supportsMultipleDisplayModes": true
+  },
+  "permissions": ["camera"],
   "icons": [
     {
       "src": "/icon-192x192.svg",
