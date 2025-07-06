@@ -6,6 +6,7 @@ import Navbar from "@/components/Navbar";
 import { AuthProvider } from "@/app/contexts/AuthContext";
 import PWAInstallPrompt from "@/components/PWAInstallPrompt";
 import ErrorBoundary from "@/components/ErrorBoundary";
+import OfflineStatus from '@/components/OfflineStatus';
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -77,6 +78,7 @@ export default function RootLayout({
             />
           </AuthProvider>
           <PWAInstallPrompt />
+          <OfflineStatus />
         </ErrorBoundary>
       </body>
     </html>

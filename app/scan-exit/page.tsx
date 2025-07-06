@@ -11,6 +11,8 @@ import LoadingSpinner from '@/components/LoadingSpinner';
 import QuickStats from '@/components/QuickStats';
 import ExitRoute from '@/components/ExitRoute';
 import { cn } from '@/lib/utils';
+import { offlineStorage } from '@/lib/offlineStorage';
+import { useAuth } from '@/app/contexts/AuthContext';
 
 type ScanResult = 'success' | 'not-inside' | 'invalid' | null;
 
@@ -28,6 +30,8 @@ export default function ScanExit() {
   const scanAreaRef = useRef<HTMLDivElement>(null);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const processingRef = useRef(false);
+
+  const { user } = useAuth();
 
   // Ensure we're on the client side
   useEffect(() => {
@@ -82,9 +86,20 @@ export default function ScanExit() {
       return 'success';
     } catch (error) {
       console.error('Network Error:', error);
-      return 'invalid';
+      // Sauvegarde hors ligne
+      if (user) {
+        await offlineStorage.saveOfflineScan({
+          ticketId,
+          type: 'exit',
+          timestamp: Date.now(),
+          userId: user.id,
+          userRole: user.role
+        });
+        toast('Scan sauvegardé hors ligne', { icon: '📶' });
+      }
+      return 'success'; // On considère comme succès localement
     }
-  }, []);
+  }, [user]);
 
   // Reset stable
   const resetScanResult = useCallback(() => {

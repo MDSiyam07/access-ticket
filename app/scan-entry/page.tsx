@@ -11,6 +11,8 @@ import ControlledQRScanner from '@/components/ControlledQRScanner';
 import QuickStats from '@/components/QuickStats';
 import EntryRoute from '@/components/EntryRoute';
 import { cn } from '@/lib/utils';
+import { offlineStorage } from '@/lib/offlineStorage';
+import { useAuth } from '@/app/contexts/AuthContext';
 
 type ScanResult = 'success' | 'already-used' | 'invalid' | null;
 
@@ -28,6 +30,8 @@ export default function ScanEntry() {
   const scanAreaRef = useRef<HTMLDivElement>(null);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const processingRef = useRef(false);
+
+  const { user } = useAuth();
 
   // Ensure we're on the client side
   useEffect(() => {
@@ -80,9 +84,20 @@ export default function ScanEntry() {
       return 'success';
     } catch (error) {
       console.error('Network Error:', error);
-      return 'invalid';
+      // Sauvegarde hors ligne
+      if (user) {
+        await offlineStorage.saveOfflineScan({
+          ticketId,
+          type: 'entry',
+          timestamp: Date.now(),
+          userId: user.id,
+          userRole: user.role
+        });
+        toast('Scan sauvegardé hors ligne', { icon: '📶' });
+      }
+      return 'success'; // On considère comme succès localement
     }
-  }, []);
+  }, [user]);
 
   // Reset stable
   const resetScanResult = useCallback(() => {

@@ -1,7 +1,6 @@
 import type { NextConfig } from "next";
 import withPWA from '@ducanh2912/next-pwa';
 
-// Type pour les options PWA étendues
 interface PWAPluginOptions {
   dest: string;
   register: boolean;
@@ -68,15 +67,13 @@ const nextConfig: NextConfig = {
             key: 'Referrer-Policy',
             value: 'origin-when-cross-origin',
           },
-          // Permissions critiques pour PWA - syntaxe corrigée
           {
             key: 'Permissions-Policy',
-            value: 'camera=(self), microphone=(self), geolocation=(self)',
+            value: 'camera=*, microphone=*',
           },
-          // Content Security Policy pour PWA - beaucoup plus permissif pour la caméra
           {
             key: 'Content-Security-Policy',
-            value: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; media-src 'self' blob: data: https:; connect-src 'self' https: wss: ws:; font-src 'self' https:; worker-src 'self' blob:;",
+            value: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https: mediastream:; media-src 'self' blob: data: https: mediastream:; connect-src 'self' https: wss: ws:; font-src 'self' https:; worker-src 'self' blob:;",
           },
         ],
       },
@@ -88,44 +85,28 @@ const pwaOptions: PWAPluginOptions = {
   dest: 'public',
   register: true,
   disable: process.env.NODE_ENV === 'development',
-  // Ajouts importants pour PWA
-  runtimeCaching: [{
-    urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
-    handler: 'CacheFirst',
-    options: {
-      cacheName: 'google-fonts-cache',
-      expiration: {
-        maxEntries: 10,
-        maxAgeSeconds: 60 * 60 * 24 * 365, // 1 year
-      },
-      cacheableResponse: {
-        statuses: [0, 200],
-      },
-    },
-  },
-  // Cache pour les ressources de caméra
-  {
-    urlPattern: /^blob:.*/i,
-    handler: 'NetworkOnly',
-    options: {
-      cacheName: 'camera-resources',
-      expiration: {
-        maxEntries: 50,
-        maxAgeSeconds: 60 * 60 * 24, // 1 day
-      },
-      cacheableResponse: {
-        statuses: [0, 200],
+  runtimeCaching: [
+    {
+      urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
+      handler: 'CacheFirst',
+      options: {
+        cacheName: 'google-fonts-cache',
+        expiration: {
+          maxEntries: 10,
+          maxAgeSeconds: 60 * 60 * 24 * 365, // 1 year
+        },
+        cacheableResponse: {
+          statuses: [0, 200],
+        },
       },
     },
-  }],
-  // Configuration du manifeste
+  ],
   additionalManifestEntries: [
     {
       url: '/',
       revision: '1',
     },
   ],
-  // Fallbacks pour PWA
   fallbacks: {
     document: '/offline',
   },
