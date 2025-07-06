@@ -216,7 +216,7 @@ export default function ScanEntry() {
     return (
       <div className="max-w-2xl mx-auto space-y-6">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+          <h1 className="text-3xl font-bold gradient-text mb-2">
             Scan d&apos;Entrée
           </h1>
           <LoadingSpinner size="lg" text="Initialisation..." />
@@ -229,20 +229,20 @@ export default function ScanEntry() {
     <div className="max-w-2xl mx-auto space-y-6">
       {/* Header */}
       <div className="text-center mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">
+        <h1 className="text-4xl font-bold gradient-text mb-2">
           Scan d&apos;Entrée
         </h1>
-        <p className="text-gray-600">
+        <p className="text-muted-foreground text-lg">
           Scannez les billets pour valider l&apos;accès à l&apos;événement
         </p>
       </div>
 
       {/* Camera/Scan Area */}
-      <Card className="festival-card !py-0">
+      <Card className="glass-card !py-0">
         <CardContent className="p-0">
           <div 
             ref={scanAreaRef}
-            className="relative aspect-square bg-gray-900 rounded-t-xl overflow-hidden"
+            className="relative aspect-square bg-gradient-to-br from-modern-violet-900 to-modern-cyan-900 rounded-t-3xl overflow-hidden"
           >
             {/* Scanner QR - Toujours rendu mais masqué quand il y a un résultat */}
             <div className={`absolute inset-0 ${scanResult ? 'invisible' : 'visible'}`}>
@@ -257,12 +257,12 @@ export default function ScanEntry() {
 
             {/* Result Display - Affiché par-dessus le scanner */}
             {scanResult && (
-              <div className="absolute inset-0 bg-gradient-to-br from-gray-800 to-gray-900 flex items-center justify-center z-10">
+              <div className="absolute inset-0 bg-gradient-to-br from-modern-violet-800/90 to-modern-cyan-800/90 backdrop-blur-sm flex items-center justify-center z-10">
                 <div className="text-center">
                   {scanResult === 'success' ? (
                     <div className="text-center">
-                      <CheckCircle className="w-24 h-24 text-green-500 mx-auto mb-4" />
-                      <p className="text-green-400 text-2xl font-bold mb-2">
+                      <CheckCircle className="w-24 h-24 text-modern-cyan-400 mx-auto mb-4 pulse-glow" />
+                      <p className="text-modern-cyan-300 text-2xl font-bold mb-2">
                         ACCÈS AUTORISÉ
                       </p>
                       <p className="text-white text-lg">
@@ -271,8 +271,8 @@ export default function ScanEntry() {
                     </div>
                   ) : scanResult === 'already-used' ? (
                     <div className="text-center">
-                      <XCircle className="w-24 h-24 text-orange-500 mx-auto mb-4" />
-                      <p className="text-orange-400 text-2xl font-bold mb-2">
+                      <XCircle className="w-24 h-24 text-modern-gold-400 mx-auto mb-4" />
+                      <p className="text-modern-gold-300 text-2xl font-bold mb-2">
                         BILLET DÉJÀ UTILISÉ
                       </p>
                       <p className="text-white text-lg">
@@ -281,8 +281,8 @@ export default function ScanEntry() {
                     </div>
                   ) : (
                     <div className="text-center">
-                      <XCircle className="w-24 h-24 text-red-500 mx-auto mb-4" />
-                      <p className="text-red-400 text-2xl font-bold mb-2">
+                      <XCircle className="w-24 h-24 text-destructive mx-auto mb-4" />
+                      <p className="text-destructive text-2xl font-bold mb-2">
                         ACCÈS REFUSÉ
                       </p>
                       <p className="text-white text-lg">
@@ -296,9 +296,12 @@ export default function ScanEntry() {
 
             {/* Placeholder pendant l'initialisation */}
             {!scannerReady && !scanResult && (
-              <div className="absolute inset-0 bg-gray-800 flex items-center justify-center">
+              <div className="absolute inset-0 bg-gradient-to-br from-modern-violet-800 to-modern-cyan-800 flex items-center justify-center">
                 <div className="text-center text-white">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white mx-auto mb-2"></div>
+                  <div className="relative">
+                    <div className="animate-spin rounded-full h-12 w-12 border-4 border-modern-violet-200 border-t-modern-violet-600 mx-auto mb-4"></div>
+                    <div className="absolute inset-0 rounded-full h-12 w-12 border-4 border-transparent border-t-modern-cyan-400 animate-spin" style={{ animationDirection: 'reverse', animationDuration: '1.5s' }}></div>
+                  </div>
                   <p className="text-sm">Initialisation du scanner...</p>
                 </div>
               </div>
@@ -315,10 +318,10 @@ export default function ScanEntry() {
                     onClick={startCamera}
                     disabled={!scannerReady || processingRef.current || isScanning}
                     className={cn(
-                      "flex-1 h-14 rounded-2xl text-white text-lg font-semibold shadow-md transition-all duration-200",
+                      "flex-1 h-14 rounded-2xl text-white text-lg font-semibold shadow-lg transition-all duration-300",
                       isScanning
-                        ? "bg-green-600 cursor-default"
-                        : "bg-green-500 hover:bg-green-600 active:scale-[0.98]",
+                        ? "bg-modern-cyan-600 cursor-default"
+                        : "bg-modern-cyan-500 hover:bg-modern-cyan-600 hover:shadow-xl active:scale-95",
                       (!scannerReady || processingRef.current || isScanning) && "opacity-50 cursor-not-allowed"
                     )}
                   >
@@ -330,9 +333,9 @@ export default function ScanEntry() {
                     <Button
                       onClick={stopCamera}
                       variant="outline"
-                      className="h-14 px-6 rounded-2xl text-sm text-red-500 hover:text-red-600"
+                      className="h-14 px-6 rounded-2xl text-sm border-modern-violet-200 text-modern-violet-600 hover:bg-modern-violet-50"
                     >
-                      <Square className="w-5 h-5 text-red-500" />
+                      <Square className="w-5 h-5 text-modern-violet-600" />
                     </Button>
                   )}
                 </div>
@@ -340,20 +343,20 @@ export default function ScanEntry() {
                 {/* Indicateur d'état */}
                 <div className="text-center text-sm">
                   {!scannerReady ? (
-                    <span className="text-orange-500">⚠️ Scanner en préparation...</span>
+                    <span className="text-muted-foreground">⚠️ Scanner en préparation...</span>
                   ) : isScanning ? (
-                    <span className="text-green-500">🔍 Scanner actif - Pointez vers un QR code</span>
+                    <span className="text-modern-cyan-600 font-medium">🔍 Scanner actif - Pointez vers un QR code</span>
                   ) : (
-                    <span className="text-gray-500">📱 Scanner prêt</span>
+                    <span className="text-muted-foreground">📱 Scanner prêt</span>
                   )}
                 </div>
 
                 <div className="text-center">
-                  <p className="text-gray-500 mb-2">ou</p>
+                  <p className="text-muted-foreground mb-2">ou</p>
                   <Button
                     onClick={toggleManualInput}
                     variant="outline"
-                    className="w-full h-12 rounded-2xl"
+                    className="w-full h-12 rounded-2xl border-modern-violet-200 text-modern-violet-700 hover:bg-modern-violet-50"
                     disabled={processingRef.current || isScanning}
                   >
                     <Type className="w-5 h-5 mr-2" />
@@ -365,7 +368,7 @@ export default function ScanEntry() {
 
             {/* Manual input */}
             {showManualInput && (
-              <div className="space-y-3 pt-4 border-t border-gray-200">
+              <div className="space-y-3 pt-4 border-t border-border/50">
                 <Input
                   placeholder="Numéro de billet (ex: TK1234)"
                   value={manualTicket}
@@ -379,7 +382,7 @@ export default function ScanEntry() {
                   <Button
                     onClick={cancelManualInput}
                     variant="outline"
-                    className="h-12"
+                    className="h-12 border-modern-violet-200 text-modern-violet-700 hover:bg-modern-violet-50"
                     disabled={processingRef.current}
                   >
                     Annuler
@@ -387,7 +390,7 @@ export default function ScanEntry() {
                   <Button
                     onClick={handleManualScan}
                     disabled={!manualTicket.trim() || processingRef.current}
-                    className="h-12 festival-button"
+                    className="h-12 glass-button"
                   >
                     {processingRef.current ? 'Traitement...' : 'Valider'}
                   </Button>

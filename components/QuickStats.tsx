@@ -75,7 +75,7 @@ export default function QuickStats({ type, refreshTrigger }: QuickStatsProps) {
       <div className="grid grid-cols-2 gap-4">
         <Card className="festival-card">
           <CardContent className="p-4 text-center">
-            <div className="text-2xl font-bold text-orange-600">{stats.exited}</div>
+                            <div className="text-2xl font-bold text-gray-600">{stats.exited}</div>
             <div className="text-sm text-gray-500">Sorties validées aujourd&apos;hui</div>
           </CardContent>
         </Card>

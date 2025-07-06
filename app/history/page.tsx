@@ -80,7 +80,7 @@ export default function History() {
       case 'failed':
         return <Badge className="bg-red-100 text-red-800 hover:bg-red-100">Échec</Badge>;
       case 'duplicate':
-        return <Badge className="bg-orange-100 text-orange-800 hover:bg-orange-100">Déjà utilisé</Badge>;
+        return <Badge className="bg-gray-100 text-gray-800 hover:bg-gray-100">Déjà utilisé</Badge>;
       default:
         return <Badge variant="secondary">{status}</Badge>;
     }
@@ -90,7 +90,7 @@ export default function History() {
     return type === 'entry' ? (
       <UserCheck className="w-4 h-4 text-green-600" />
     ) : (
-      <UserX className="w-4 h-4 text-orange-600" />
+      <UserX className="w-4 h-4 text-gray-600" />
     );
   };
 

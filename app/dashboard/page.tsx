@@ -76,49 +76,57 @@ export default function Dashboard() {
     title, 
     value, 
     icon: Icon, 
-    color, 
-    description 
+    description,
+    color = 'violet'
   }: {
     title: string;
     value: number;
     icon: React.ElementType;
-    color: string;
     description: string;
-  }) => (
-    <Card className="festival-card animate-fade-in">
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium text-gray-600">{title}</CardTitle>
-        <div className={`p-2 rounded-lg ${color}`}>
-          <Icon className="h-5 w-5 text-white" />
-        </div>
-      </CardHeader>
-      <CardContent>
-        <div className="text-3xl font-bold text-gray-900 mb-1">
-          {value.toLocaleString()}
-        </div>
-        <p className="text-sm text-gray-500">{description}</p>
-      </CardContent>
-    </Card>
-  );
+    color?: 'violet' | 'cyan' | 'gold';
+  }) => {
+    const colorClasses = {
+      violet: 'bg-modern-violet-500 text-white',
+      cyan: 'bg-modern-cyan-500 text-white',
+      gold: 'bg-modern-gold-500 text-white'
+    };
+
+    return (
+      <Card className="glass-card animate-fade-in">
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium text-foreground">{title}</CardTitle>
+          <div className={`p-3 rounded-2xl ${colorClasses[color]} shadow-lg`}>
+            <Icon className="h-5 w-5" />
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="text-3xl font-bold text-foreground mb-1">
+            {value.toLocaleString()}
+          </div>
+          <p className="text-sm text-muted-foreground">{description}</p>
+        </CardContent>
+      </Card>
+    );
+  };
 
   if (loading) {
     return (
       <div className="space-y-6">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+          <h1 className="text-3xl font-bold gradient-text mb-2">
             Statistiques Festival
           </h1>
-          <p className="text-gray-600">
+          <p className="text-muted-foreground">
             Chargement des données...
           </p>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {[...Array(4)].map((_, i) => (
-            <Card key={i} className="festival-card">
+            <Card key={i} className="glass-card">
               <CardContent className="p-6">
                 <div className="animate-pulse">
-                  <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
-                  <div className="h-8 bg-gray-200 rounded w-1/2"></div>
+                  <div className="h-4 bg-muted rounded-2xl w-3/4 mb-2"></div>
+                  <div className="h-8 bg-muted rounded-2xl w-1/2"></div>
                 </div>
               </CardContent>
             </Card>
@@ -134,26 +142,26 @@ export default function Dashboard() {
       <div className="mb-8">
         <div className="flex items-center gap-3 mb-4">
           {isAdmin ? (
-            <div className="flex items-center gap-2 bg-red-100 text-red-800 px-3 py-1 rounded-full text-sm font-medium">
+            <div className="flex items-center gap-2 bg-modern-violet-100 text-modern-violet-800 px-4 py-2 rounded-2xl text-sm font-medium border border-modern-violet-200">
               <Shield className="w-4 h-4" />
               Mode Administrateur
             </div>
           ) : (
-            <div className="flex items-center gap-2 bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium">
+            <div className="flex items-center gap-2 bg-modern-cyan-100 text-modern-cyan-800 px-4 py-2 rounded-2xl text-sm font-medium border border-modern-cyan-200">
               <User className="w-4 h-4" />
               Mode Utilisateur
             </div>
           )}
         </div>
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">
+        <h1 className="text-4xl font-bold gradient-text mb-2">
           {isAdmin ? 'Tableau de Bord Administrateur' : 'Tableau de Bord Utilisateur'}
         </h1>
-                  <p className="text-gray-600">
-            {isAdmin 
-              ? 'Vue d&apos;ensemble complète du contrôle d&apos;accès avec toutes les fonctionnalités'
-              : 'Vue d&apos;ensemble simplifiée pour le contrôle d&apos;accès'
-            }
-          </p>
+        <p className="text-muted-foreground text-lg">
+          {isAdmin 
+            ? "Vue d'ensemble complète du contrôle d'accès avec toutes les fonctionnalités"
+            : "Vue d'ensemble simplifiée pour le contrôle d'accès"
+          }
+        </p>
       </div>
 
       {/* Stats Grid */}
@@ -162,46 +170,46 @@ export default function Dashboard() {
           title="Total Tickets"
           value={stats.totalTickets}
           icon={Users}
-          color="bg-festival-blue"
           description="Tickets importés"
+          color="violet"
         />
         <StatCard
           title="En Attente"
           value={stats.pending}
           icon={Clock}
-          color="bg-yellow-500"
           description="Tickets non utilisés"
+          color="gold"
         />
         <StatCard
           title="Entrées scannées"
           value={stats.scannedIn}
           icon={UserCheck}
-          color="bg-festival-success"
           description="Billets validés à l'entrée"
+          color="cyan"
         />
         <StatCard
           title="Sorties scannées"
           value={stats.scannedOut}
           icon={UserX}
-          color="bg-festival-danger"
           description="Billets validés à la sortie"
+          color="cyan"
         />
         <StatCard
           title="Présents actuellement"
           value={stats.currentlyInside}
           icon={TrendingUp}
-          color="bg-purple-500"
           description="Différence entrées - sorties"
+          color="violet"
         />
       </div>
 
       {/* Live Activity - seulement pour les admins */}
       {isAdmin && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Card className="festival-card">
+          <Card className="glass-card">
             <CardHeader>
               <CardTitle className="flex items-center">
-                <Clock className="w-5 h-5 mr-2 text-festival-blue" />
+                <Clock className="w-5 h-5 mr-2 text-modern-cyan-600" />
                 Activité en temps réel
               </CardTitle>
             </CardHeader>
@@ -251,10 +259,10 @@ export default function Dashboard() {
             </CardContent>
           </Card>
 
-          <Card className="festival-card">
+          <Card className="glass-card">
             <CardHeader>
               <CardTitle className="flex items-center">
-                <TrendingUp className="w-5 h-5 mr-2 text-festival-blue" />
+                <TrendingUp className="w-5 h-5 mr-2 text-modern-cyan-600" />
                 Actions rapides
               </CardTitle>
             </CardHeader>
@@ -291,40 +299,6 @@ export default function Dashboard() {
             </CardContent>
           </Card>
         </div>
-      )}
-
-      {/* Actions rapides pour les utilisateurs */}
-      {!isAdmin && (
-        <Card className="festival-card">
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <User className="w-5 h-5 mr-2 text-festival-blue" />
-              Actions rapides
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <button className="text-left p-4 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors">
-                <div className="flex items-center">
-                  <UserCheck className="w-6 h-6 mr-3 text-green-600" />
-                  <div>
-                    <p className="font-medium text-gray-900">Scanner Entrée</p>
-                    <p className="text-sm text-gray-500">Valider l&apos;entrée des visiteurs</p>
-                  </div>
-                </div>
-              </button>
-              <button className="text-left p-4 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors">
-                <div className="flex items-center">
-                  <UserX className="w-6 h-6 mr-3 text-red-600" />
-                  <div>
-                    <p className="font-medium text-gray-900">Scanner Sortie</p>
-                    <p className="text-sm text-gray-500">Enregistrer la sortie des visiteurs</p>
-                  </div>
-                </div>
-              </button>
-            </div>
-          </CardContent>
-        </Card>
       )}
     </div>
   );

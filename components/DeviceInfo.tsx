@@ -72,7 +72,7 @@ export default function DeviceInfo() {
     } else if (deviceInfo.isMobile) {
       return {
         status: 'warning',
-        icon: <Download className="w-4 h-4 text-yellow-500" />,
+        icon: <Download className="w-4 h-4 text-gray-500" />,
                  text: 'Installez l&apos;app pour une meilleure expérience'
       };
     } else {
@@ -88,7 +88,7 @@ export default function DeviceInfo() {
     if (deviceInfo.isIOS) {
       return {
         status: 'warning',
-        icon: <AlertCircle className="w-4 h-4 text-yellow-500" />,
+        icon: <AlertCircle className="w-4 h-4 text-gray-500" />,
         text: 'iOS: Utilisez Safari et autorisez la caméra'
       };
     } else if (deviceInfo.isAndroid) {

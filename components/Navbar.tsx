@@ -42,10 +42,13 @@ export default function Navbar({ children }: NavbarProps) {
   // Show loading state
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-festival-blue mx-auto"></div>
-          <p className="mt-4 text-gray-600">Chargement...</p>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-modern-violet-50 via-modern-cyan-50 to-modern-violet-100">
+        <div className="glass-card p-8 text-center floating-animation">
+          <div className="relative">
+            <div className="animate-spin rounded-full h-16 w-16 border-4 border-modern-violet-200 border-t-modern-violet-600 mx-auto pulse-glow"></div>
+            <div className="absolute inset-0 rounded-full h-16 w-16 border-4 border-transparent border-t-modern-cyan-400 animate-spin" style={{ animationDirection: 'reverse', animationDuration: '1.5s' }}></div>
+          </div>
+          <p className="mt-6 text-lg font-semibold gradient-text">Chargement...</p>
         </div>
       </div>
     );
@@ -99,17 +102,17 @@ export default function Navbar({ children }: NavbarProps) {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-br from-modern-violet-50 via-modern-cyan-50 to-modern-violet-100">
       {/* Mobile menu button */}
-      <div className="lg:hidden bg-white shadow-sm border-b border-gray-200">
+      <div className="lg:hidden glass-card border-b border-border/50">
         <div className="flex items-center justify-between px-4 py-3">
           <div className="flex items-center">
-            <div className="w-8 h-8 bg-festival-blue rounded-lg flex items-center justify-center">
-              <ScanLine className="w-5 h-5 text-white" />
+            <div className="glassmorphism w-10 h-10 flex items-center justify-center">
+              <ScanLine className="w-6 h-6 text-modern-violet-600" />
             </div>
-            <span className="ml-2 text-lg font-semibold text-gray-900">AccessTicket</span>
+            <span className="ml-3 text-lg font-semibold gradient-text">AccessTicket</span>
             {isAdmin && (
-              <div className="ml-2 flex items-center gap-1 bg-red-100 text-red-800 px-2 py-1 rounded-full text-xs font-medium">
+              <div className="ml-3 flex items-center gap-1 bg-modern-violet-100 text-modern-violet-800 px-3 py-1 rounded-2xl text-xs font-medium border border-modern-violet-200">
                 <Shield className="w-3 h-3" />
                 Admin
               </div>
@@ -119,12 +122,12 @@ export default function Navbar({ children }: NavbarProps) {
             variant="ghost"
             size="sm"
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            className="p-2"
+            className="p-2 hover:bg-modern-violet-50 rounded-2xl"
           >
             {isMobileMenuOpen ? (
-              <X className="w-6 h-6" />
+              <X className="w-6 h-6 text-foreground" />
             ) : (
-              <Menu className="w-6 h-6" />
+              <Menu className="w-6 h-6 text-foreground" />
             )}
           </Button>
         </div>
@@ -133,19 +136,19 @@ export default function Navbar({ children }: NavbarProps) {
       {/* Mobile menu overlay */}
       {isMobileMenuOpen && (
         <div 
-          className="lg:hidden fixed inset-0 z-50 bg-black bg-opacity-50" 
+          className="lg:hidden fixed inset-0 z-50 bg-black/20 backdrop-blur-sm" 
           onClick={handleOverlayClick}
         >
-          <div className="fixed inset-y-0 left-0 w-64 bg-white shadow-xl" onClick={handleMenuClick}>
+          <div className="fixed inset-y-0 left-0 w-72 glass-card shadow-2xl" onClick={handleMenuClick}>
             <div className="flex flex-col h-full">
               {/* Logo */}
-              <div className="flex items-center px-6 py-4 border-b border-gray-200">
-                <div className="w-8 h-8 bg-festival-blue rounded-lg flex items-center justify-center">
-                  <ScanLine className="w-5 h-5 text-white" />
+              <div className="flex items-center px-6 py-4 border-b border-border/50">
+                <div className="glassmorphism w-10 h-10 flex items-center justify-center">
+                  <ScanLine className="w-6 h-6 text-modern-violet-600" />
                 </div>
-                <span className="ml-3 text-lg font-semibold text-gray-900">AccessTicket</span>
+                <span className="ml-3 text-lg font-semibold gradient-text">AccessTicket</span>
                 {isAdmin && (
-                  <div className="ml-2 flex items-center gap-1 bg-red-100 text-red-800 px-2 py-1 rounded-full text-xs font-medium">
+                  <div className="ml-3 flex items-center gap-1 bg-modern-violet-100 text-modern-violet-800 px-3 py-1 rounded-2xl text-xs font-medium border border-modern-violet-200">
                     <Shield className="w-3 h-3" />
                     Admin
                   </div>
@@ -161,10 +164,10 @@ export default function Navbar({ children }: NavbarProps) {
                       key={item.name}
                       href={item.href}
                       onClick={closeMobileMenu}
-                      className={`flex items-center px-3 py-3 text-sm font-medium rounded-lg transition-colors ${
+                      className={`flex items-center px-4 py-3 text-sm font-medium rounded-2xl transition-all duration-300 ${
                         isActive
-                          ? 'bg-festival-blue text-white'
-                          : 'text-gray-700 hover:bg-gray-100'
+                          ? 'bg-modern-violet-500 text-white shadow-lg'
+                          : 'text-foreground hover:bg-modern-violet-50 hover:scale-105'
                       }`}
                     >
                       <item.icon className="w-5 h-5 mr-3" />
@@ -175,18 +178,18 @@ export default function Navbar({ children }: NavbarProps) {
               </nav>
 
               {/* User info and logout */}
-              <div className="border-t border-gray-200 p-4">
+              <div className="border-t border-border/50 p-4">
                 <div className="flex items-center mb-3">
-                  <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">
-                    <span className="text-sm font-medium text-gray-600">
+                  <div className="glassmorphism w-10 h-10 rounded-2xl flex items-center justify-center">
+                    <span className="text-sm font-medium text-modern-violet-600">
                       {user?.name?.charAt(0) || 'A'}
                     </span>
                   </div>
                   <div className="ml-3">
-                    <p className="text-sm font-medium text-gray-900">{user?.name}</p>
-                    <p className="text-xs text-gray-500">{user?.email}</p>
+                    <p className="text-sm font-medium text-foreground">{user?.name}</p>
+                    <p className="text-xs text-muted-foreground">{user?.email}</p>
                     {isAdmin && (
-                      <p className="text-xs text-red-600 font-medium">Administrateur</p>
+                      <p className="text-xs text-modern-violet-600 font-medium">Administrateur</p>
                     )}
                   </div>
                 </div>
@@ -194,7 +197,7 @@ export default function Navbar({ children }: NavbarProps) {
                   onClick={handleLogout}
                   variant="outline"
                   size="sm"
-                  className="w-full justify-start"
+                  className="w-full justify-start border-modern-violet-200 text-modern-violet-700 hover:bg-modern-violet-50 rounded-2xl"
                 >
                   <LogOutIcon className="w-4 h-4 mr-2" />
                   Déconnexion

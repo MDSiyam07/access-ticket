@@ -763,7 +763,7 @@ if (scannerState === 'idle' || scannerState === 'initializing') {
 
 if (scannerState === 'error') {
   return (
-    <div className="w-full h-full bg-gradient-to-br from-red-50 to-orange-100 rounded-xl flex items-center justify-center">
+            <div className="w-full h-full bg-gradient-to-br from-red-50 to-gray-100 rounded-xl flex items-center justify-center">
       <div className="text-center p-8 max-w-sm">
         <div className="w-16 h-16 bg-red-500 rounded-full flex items-center justify-center mx-auto mb-6">
           <AlertCircle className="w-8 h-8 text-white" />
