@@ -330,9 +330,9 @@ export default function ScanEntry() {
                     <Button
                       onClick={stopCamera}
                       variant="outline"
-                      className="h-14 px-6 rounded-2xl text-sm"
+                      className="h-14 px-6 rounded-2xl text-sm text-red-500 hover:text-red-600"
                     >
-                      <Square className="w-5 h-5" />
+                      <Square className="w-5 h-5 text-red-500" />
                     </Button>
                   )}
                 </div>
