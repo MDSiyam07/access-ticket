@@ -21,7 +21,6 @@ export default function ScanExit() {
   const [showManualInput, setShowManualInput] = useState(false);
   const [isClient, setIsClient] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [scannerReady, setScannerReady] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   
   // Refs
@@ -190,33 +189,26 @@ export default function ScanExit() {
   // Handlers pour contrôler le scanner
   const startCamera = useCallback(() => {
     console.log('📷 Démarrage du scanner...');
-    if (!processingRef.current && !scanResult && scannerReady) {
+    if (!processingRef.current && !scanResult) {
       setIsScanning(true);
       setShowManualInput(false); // Fermer la saisie manuelle
     } else {
       console.log('⚠️ Scanner non disponible');
-      if (!scannerReady) {
-        toast.error('Scanner non prêt, veuillez patienter');
-      }
     }
-  }, [scanResult, scannerReady]);
+  }, [scanResult]);
 
   const stopCamera = useCallback(() => {
     console.log('🛑 Arrêt du scanner...');
     setIsScanning(false);
   }, []);
 
-  // Callback quand le scanner est prêt
   const handleScannerReady = useCallback(() => {
-    console.log('✅ Scanner prêt');
-    setScannerReady(true);
+    console.log('Scanner ready');
   }, []);
 
-  // Callback pour les erreurs de scanner
   const handleScannerError = useCallback((error: string) => {
-    console.error('❌ Erreur scanner:', error);
-    setScannerReady(false);
-    toast.error('Erreur du scanner: ' + error);
+    console.error('Scanner error:', error);
+    toast.error('Erreur lors de la préparation du scanner');
   }, []);
 
   // Don't render until we're on the client side
@@ -301,18 +293,7 @@ export default function ScanExit() {
               </div>
             )}
 
-            {/* Placeholder pendant l'initialisation */}
-            {!scannerReady && !scanResult && (
-              <div className="absolute inset-0 bg-gradient-to-br from-modern-violet-800 to-modern-cyan-800 flex items-center justify-center">
-                <div className="text-center text-white">
-                  <div className="relative">
-                    <div className="animate-spin rounded-full h-12 w-12 border-4 border-modern-violet-200 border-t-modern-violet-600 mx-auto mb-4"></div>
-                    <div className="absolute inset-0 rounded-full h-12 w-12 border-4 border-transparent border-t-modern-cyan-400 animate-spin" style={{ animationDirection: 'reverse', animationDuration: '1.5s' }}></div>
-                  </div>
-                  <p className="text-sm">Initialisation du scanner...</p>
-                </div>
-              </div>
-            )}
+
           </div>
 
           {/* Controls */}
@@ -323,13 +304,13 @@ export default function ScanExit() {
                 <div className="flex gap-3">
                   <Button
                     onClick={startCamera}
-                    disabled={!scannerReady || processingRef.current || isScanning}
+                    disabled={processingRef.current || isScanning}
                     className={cn(
                       "flex-1 h-14 rounded-2xl text-white text-lg font-semibold shadow-lg transition-all duration-300",
                       isScanning
                         ? "bg-modern-cyan-600 cursor-default"
                         : "bg-modern-cyan-500 hover:bg-modern-cyan-600 hover:shadow-xl active:scale-95",
-                      (!scannerReady || processingRef.current || isScanning) && "opacity-50 cursor-not-allowed"
+                      (processingRef.current || isScanning) && "opacity-50 cursor-not-allowed"
                     )}
                   >
                     <Camera className="w-5 h-5 mr-2" />
@@ -349,9 +330,7 @@ export default function ScanExit() {
 
                 {/* Indicateur d'état */}
                 <div className="text-center text-sm">
-                  {!scannerReady ? (
-                    <span className="text-muted-foreground">⚠️ Scanner en préparation...</span>
-                  ) : isScanning ? (
+                  {isScanning ? (
                     <span className="text-modern-cyan-600 font-medium">🔍 Scanner actif - Pointez vers un QR code</span>
                   ) : (
                     <span className="text-muted-foreground">📱 Scanner prêt</span>

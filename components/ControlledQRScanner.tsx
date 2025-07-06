@@ -539,17 +539,44 @@ const ControlledQRScanner: React.FC<ControlledQRScannerProps> = ({
 // Vérifier les permissions et compatibilité
 const checkCameraAccess = useCallback(async () => {
   try {
-    // Test simple de l'accès caméra
+    // Vérifier d'abord si l'API est disponible
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      throw new Error('API caméra non supportée');
+    }
+
+    // Test simple de l'accès caméra - ne pas libérer immédiatement
     const stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: 'environment' }
+      video: { 
+        facingMode: 'environment'
+      }
     });
     
-    // Libérer immédiatement
-    stream.getTracks().forEach(track => track.stop());
+    // Vérifier que le stream est valide
+    if (!stream || stream.getTracks().length === 0) {
+      throw new Error('Stream caméra invalide');
+    }
+
+    // Libérer le stream après un délai plus long pour éviter les conflits
+    setTimeout(() => {
+      stream.getTracks().forEach(track => track.stop());
+    }, 500);
+
     return true;
   } catch (error) {
     console.error('Camera access error:', error);
-    return false;
+    
+    // Messages d'erreur plus spécifiques
+    if (error instanceof Error) {
+      if (error.name === 'NotAllowedError') {
+        throw new Error('Accès à la caméra refusé. Veuillez autoriser l\'accès dans les paramètres.');
+      } else if (error.name === 'NotFoundError') {
+        throw new Error('Aucune caméra trouvée sur cet appareil.');
+      } else if (error.name === 'NotSupportedError') {
+        throw new Error('Votre navigateur ne supporte pas l\'accès à la caméra.');
+      }
+    }
+    
+    throw error;
   }
 }, []);
 
@@ -605,10 +632,7 @@ const initializeScanner = useCallback(async () => {
     setErrorMessage(null);
     
     // Vérifier l'accès caméra
-    const hasCamera = await checkCameraAccess();
-    if (!hasCamera) {
-      throw new Error('Accès à la caméra refusé ou indisponible');
-    }
+    await checkCameraAccess();
     
     if (!isMounted.current) return;
     
@@ -617,16 +641,22 @@ const initializeScanner = useCallback(async () => {
     
     if (!isMounted.current) return;
     
-    // Configuration simple et fiable
+    // Configuration robuste pour différents appareils
     const config = {
       fps: 10,
       qrbox: { width: 250, height: 250 },
       rememberLastUsedCamera: true,
       aspectRatio: 1.0,
       showTorchButtonIfSupported: true,
-      supportedScanTypes: []
+      showZoomSliderIfSupported: false,
+      defaultZoomValueIfSupported: 1,
+      supportedScanTypes: [],
+      experimentalFeatures: {
+        useBarCodeDetectorIfSupported: false
+      }
     };
 
+    console.log('Initialisation du scanner avec config:', config);
     scannerRef.current = new Html5QrcodeScanner(scannerId, config, false);
     
     if (!isMounted.current) return;
@@ -640,6 +670,7 @@ const initializeScanner = useCallback(async () => {
     
   } catch (error: unknown) {
     const errorMsg = error instanceof Error ? error.message : 'Erreur d\'initialisation';
+    console.error('Erreur initialisation scanner:', error);
     setErrorMessage(errorMsg);
     setScannerState('error');
     if (onScannerError) {
@@ -653,14 +684,22 @@ const initializeScanner = useCallback(async () => {
 // Démarrer le scan
 const startScanning = useCallback(async () => {
   if (!scannerRef.current || scannerState !== 'ready' || !isMounted.current) {
+    console.log('Démarrage ignoré:', { 
+      hasScanner: !!scannerRef.current, 
+      state: scannerState, 
+      isMounted: isMounted.current 
+    });
     return;
   }
   
   try {
+    console.log('Démarrage du scan...');
     setScannerState('scanning');
     await scannerRef.current.render(handleScanSuccess, handleScanError);
+    console.log('Scanner démarré avec succès');
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : 'Erreur de démarrage';
+    console.error('Erreur démarrage scanner:', error);
     setErrorMessage(errorMsg);
     setScannerState('error');
   }
