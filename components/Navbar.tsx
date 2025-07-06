@@ -14,7 +14,8 @@ import {
   X,
   Settings,
   LogIn,
-  LogOut
+  LogOut,
+  Camera
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -68,6 +69,7 @@ export default function Navbar({ children }: NavbarProps) {
         { name: 'Scan Sortie', href: '/scan-exit', icon: LogOut },
         { name: 'Historique', href: '/history', icon: History },
         { name: 'Saisie Manuelle', href: '/manual-entry', icon: Edit3 },
+        { name: 'Test Caméra', href: '/camera-test', icon: Camera },
         { name: 'Administration', href: '/admin', icon: Settings },
       ];
     } else if (isEntryUser) {
@@ -75,18 +77,21 @@ export default function Navbar({ children }: NavbarProps) {
         { name: 'Statistiques', href: '/dashboard', icon: BarChart3 },
         { name: 'Scan Entrée', href: '/scan-entry', icon: LogIn },
         { name: 'Saisie Manuelle', href: '/manual-entry', icon: Edit3 },
+        { name: 'Test Caméra', href: '/camera-test', icon: Camera },
       ];
     } else if (isExitUser) {
       return [
         { name: 'Statistiques', href: '/dashboard', icon: BarChart3 },
         { name: 'Scan Sortie', href: '/scan-exit', icon: LogOut },
         { name: 'Saisie Manuelle', href: '/manual-entry', icon: Edit3 },
+        { name: 'Test Caméra', href: '/camera-test', icon: Camera },
       ];
     } else if (isReentryUser) {
       return [
         { name: 'Statistiques', href: '/dashboard', icon: BarChart3 },
         { name: 'Scan Entrée', href: '/scan-entry', icon: LogIn },
         { name: 'Saisie Manuelle', href: '/manual-entry', icon: Edit3 },
+        { name: 'Test Caméra', href: '/camera-test', icon: Camera },
       ];
     }
 
