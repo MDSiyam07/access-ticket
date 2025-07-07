@@ -329,11 +329,15 @@
 'use client';
 
 import Scanner from '@/components/Tmp/Scanner';
+import ZxingScanner from '@/components/Tmp/ZxingScanner';
 
 export default function CameraTestPage() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
       <Scanner />
+      <div className="mt-8">
+        <ZxingScanner />
+      </div>
     </div>
   );
 } 
