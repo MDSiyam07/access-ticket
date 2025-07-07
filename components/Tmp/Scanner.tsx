@@ -20,6 +20,7 @@ export default function Scanner() {
       if (reader) reader.remove();
     };
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const error = (err: any) => {
       console.error(err);
     };
