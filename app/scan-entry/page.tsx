@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Camera, CheckCircle, XCircle, Type, Square } from 'lucide-react';
 import toast from 'react-hot-toast';
 import LoadingSpinner from '@/components/LoadingSpinner';
-import ControlledQRScanner from '@/components/ControlledQRScanner';
+import ZxingQRScanner from '@/components/ZxingQRScanner';
 import QuickStats from '@/components/QuickStats';
 import EntryRoute from '@/components/EntryRoute';
 import { cn } from '@/lib/utils';
@@ -210,15 +210,7 @@ export default function ScanEntry() {
     setIsScanning(false);
   }, []);
 
-  // Handlers for ControlledQRScanner
-  const handleScannerReady = useCallback(() => {
-    console.log('📷 Scanner prêt');
-  }, []);
 
-  const handleScannerError = useCallback((error: string) => {
-    console.error('❌ Scanner error:', error);
-    toast.error('Erreur lors de la préparation du scanner');
-  }, []);
 
   // Don't render until we're on the client side
   if (!isClient || isLoading) {
@@ -257,12 +249,10 @@ export default function ScanEntry() {
               {/* Scanner QR - Toujours rendu mais masqué quand il y a un résultat */}
               {isScanning && !scanResult && (
                 <div className="absolute inset-0">
-                  <ControlledQRScanner
+                  <ZxingQRScanner
                     onScanSuccess={handleQRScanSuccess}
                     onScanError={handleQRScanError}
-                    isActive
-                    onScannerReady={handleScannerReady}
-                    onScannerError={handleScannerError}
+                    autoConnect={true}
                   />
                 </div>
               )}
