@@ -16,11 +16,15 @@ export default function ZxingQRScanner({
   const displayCanvasRef = useRef<HTMLCanvasElement>(null);
   const codeReader = useRef(new BrowserMultiFormatReader());
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const isStartingRef = useRef(false);
+  const hasStartedRef = useRef(false);
+  const previousIsActiveRef = useRef(false);
 
   const [error, setError] = useState<string | null>(null);
   const [lastScannedCode, setLastScannedCode] = useState<string | null>(null);
 
-  // Fonction de capture et décodage inspirée du code fonctionnel
+  // Fonction de capture et décodage
   const captureFrameAndDecode = useCallback(() => {
     if (!videoRef.current || !displayCanvasRef.current) return;
 
@@ -30,7 +34,12 @@ export default function ZxingQRScanner({
 
     if (!displayContext) return;
 
-    // Créer un canvas temporaire pour capturer la frame complète (comme dans le code fonctionnel)
+    // Vérifier si la vidéo a des dimensions valides
+    if (video.videoWidth === 0 || video.videoHeight === 0) {
+      return;
+    }
+
+    // Créer un canvas temporaire pour capturer la frame
     const tempCanvas = document.createElement("canvas");
     const tempContext = tempCanvas.getContext("2d");
     if (!tempContext) return;
@@ -46,63 +55,81 @@ export default function ZxingQRScanner({
     // Copier sur le canvas d'affichage
     displayContext.drawImage(tempCanvas, 0, 0);
 
-    // Décoder de manière synchrone dans la fonction (comme dans le code fonctionnel)
+    // Décoder
     const decodeCanvas = async () => {
       try {
         const result: Result = await codeReader.current.decodeFromCanvas(displayCanvas);
         const decodedText = result.getText();
         
-        // Éviter les scans multiples du même code
         if (decodedText && decodedText !== lastScannedCode) {
           console.log('🎯 QR Code détecté:', decodedText);
           setLastScannedCode(decodedText);
           
-          // Appeler la fonction de callback avec le code scanné
           if (onScan) {
             onScan(decodedText);
           }
         }
       } catch (err: unknown) {
-        // Ignorer les erreurs "NotFoundException" (pas de QR code trouvé)
         if (err instanceof Error && err.name !== "NotFoundException") {
           console.error("❌ Decoding error:", err);
         }
       }
     };
 
-    // Appeler decodeCanvas directement (comme dans le code fonctionnel)
     decodeCanvas();
   }, [lastScannedCode, onScan]);
 
-  // Effet principal inspiré du code fonctionnel
-  const hasStartedCameraRef = useRef(false);
-
+  // Effet principal
   useEffect(() => {
+    if (previousIsActiveRef.current === isActive) {
+      return;
+    }
+
+    previousIsActiveRef.current = isActive;
+
     if (!isActive) {
-      // Nettoyage standard
+      console.log('🧹 Nettoyage de la caméra...');
+      
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
         intervalRef.current = null;
       }
-      if (videoRef.current?.srcObject) {
-        const tracks = (videoRef.current.srcObject as MediaStream).getTracks();
+      
+      if (streamRef.current) {
+        const tracks = streamRef.current.getTracks();
         tracks.forEach((track) => track.stop());
+        streamRef.current = null;
+      }
+      
+      if (videoRef.current) {
         videoRef.current.srcObject = null;
       }
-      hasStartedCameraRef.current = false; // ✅ reset si on désactive
+      
+      hasStartedRef.current = false;
+      isStartingRef.current = false;
       setLastScannedCode(null);
       return;
     }
 
-    // ✅ éviter double appel
-    if (hasStartedCameraRef.current) return;
-    hasStartedCameraRef.current = true;
+    if (hasStartedRef.current || isStartingRef.current) {
+      return;
+    }
+
+    isStartingRef.current = true;
+    hasStartedRef.current = true;
 
     const startCamera = async () => {
       try {
         setError(null);
         setLastScannedCode(null);
         console.log('📷 Démarrage de la caméra...');
+
+        if (streamRef.current) {
+          const tracks = streamRef.current.getTracks();
+          tracks.forEach((track) => track.stop());
+          streamRef.current = null;
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
 
         const stream = await navigator.mediaDevices.getUserMedia({
           video: {
@@ -112,6 +139,9 @@ export default function ZxingQRScanner({
           },
         });
 
+        streamRef.current = stream;
+        console.log('✅ Stream obtenu, tracks:', stream.getTracks().map(t => t.kind));
+
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
 
@@ -120,32 +150,39 @@ export default function ZxingQRScanner({
               await videoRef.current?.play();
               console.log("📹 Vidéo prête, démarrage du décodage...");
               intervalRef.current = setInterval(captureFrameAndDecode, 100);
+              isStartingRef.current = false;
             } catch (playError) {
               console.error("❌ Erreur lors du démarrage de la vidéo:", playError);
               setError("Impossible de démarrer la vidéo. Autorisez l'accès à la caméra.");
+              isStartingRef.current = false;
             }
           };
         }
       } catch (err) {
         console.error("❌ Camera error:", err);
         setError("Impossible d'accéder à la caméra. Vérifiez les permissions.");
+        isStartingRef.current = false;
+        hasStartedRef.current = false;
       }
     };
 
     startCamera();
 
     return () => {
-      if (videoRef.current?.srcObject) {
-        const tracks = (videoRef.current.srcObject as MediaStream).getTracks();
-        tracks.forEach((track) => track.stop());
-      }
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
       }
-      hasStartedCameraRef.current = false;
+      if (streamRef.current) {
+        const tracks = streamRef.current.getTracks();
+        tracks.forEach((track) => track.stop());
+      }
+      if (videoRef.current) {
+        videoRef.current.srcObject = null;
+      }
+      hasStartedRef.current = false;
+      isStartingRef.current = false;
     };
-  }, [isActive, captureFrameAndDecode]);
-
+  }, [isActive]);
 
   if (!isActive) {
     return (

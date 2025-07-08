@@ -241,15 +241,13 @@ export default function ScanEntry() {
               ref={scanAreaRef}
               className="relative aspect-square bg-gradient-to-br from-modern-violet-900 to-modern-cyan-900 rounded-t-3xl overflow-hidden"
             >
-              {/* Scanner QR - Toujours rendu mais masqué quand il y a un résultat */}
-              {isScanning && !scanResult && (
-                <div className="absolute inset-0">
-                  <ZxingQRScanner
-                    onScan={handleQRScanSuccess}
-                    isActive={isScanning}
-                  />
-                </div>
-              )}
+              {/* Scanner QR - Toujours rendu, contrôlé par isActive */}
+              <div className="absolute inset-0">
+                <ZxingQRScanner
+                  onScan={handleQRScanSuccess}
+                  isActive={isScanning && !scanResult}
+                />
+              </div>
 
               {/* Result Display - Affiché par-dessus le scanner */}
               {scanResult && (
