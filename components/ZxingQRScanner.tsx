@@ -1,293 +1,198 @@
 "use client";
-
 import { useEffect, useRef, useState, useCallback } from "react";
 import { BrowserMultiFormatReader } from "@zxing/browser";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Camera, CheckCircle, XCircle, RotateCcw } from "lucide-react";
-import toast from "react-hot-toast";
-import LoadingSpinner from "@/components/LoadingSpinner";
-
-type ScanResult = 'success' | 'already-used' | 'invalid' | null;
+import { Result } from "@zxing/library";
 
 interface ZxingQRScannerProps {
-  onScanSuccess?: (ticketId: string) => void;
-  onScanError?: (error: string) => void;
-  autoConnect?: boolean;
+  onScan?: (ticketId: string) => void;
+  isActive?: boolean;
 }
 
 export default function ZxingQRScanner({ 
-  onScanSuccess, 
-  onScanError, 
-  autoConnect = false 
+  onScan, 
+  isActive = false
 }: ZxingQRScannerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const displayCanvasRef = useRef<HTMLCanvasElement>(null);
   const codeReader = useRef(new BrowserMultiFormatReader());
-  const streamRef = useRef<MediaStream | null>(null);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  const [isScanning, setIsScanning] = useState(false);
-  const [scanResult, setScanResult] = useState<ScanResult>(null);
-  const [scannedTicket, setScannedTicket] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [processingRef] = useState({ current: false });
+  const [lastScannedCode, setLastScannedCode] = useState<string | null>(null);
 
-  // Fonction de scan avec l'API
-  const scanTicket = useCallback(async (ticketId: string): Promise<ScanResult> => {
-    console.log('Scanning ticket:', ticketId);
+  // Fonction de capture et décodage inspirée du code fonctionnel
+  const captureFrameAndDecode = useCallback(() => {
+    if (!videoRef.current || !displayCanvasRef.current) return;
+
+    const video = videoRef.current;
+    const displayCanvas = displayCanvasRef.current;
+    const displayContext = displayCanvas.getContext("2d");
+
+    if (!displayContext) return;
+
+    // Créer un canvas temporaire pour capturer la frame complète (comme dans le code fonctionnel)
+    const tempCanvas = document.createElement("canvas");
+    const tempContext = tempCanvas.getContext("2d");
+    if (!tempContext) return;
+
+    tempCanvas.width = video.videoWidth;
+    tempCanvas.height = video.videoHeight;
+    tempContext.drawImage(video, 0, 0, tempCanvas.width, tempCanvas.height);
+
+    // Ajuster la taille du canvas d'affichage
+    displayCanvas.width = video.videoWidth;
+    displayCanvas.height = video.videoHeight;
     
-    try {
-      const response = await fetch('/api/tickets/scan', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          ticketNumber: ticketId,
-          action: 'ENTER',
-          entryType: 'SCAN'
-        }),
-      });
+    // Copier sur le canvas d'affichage
+    displayContext.drawImage(tempCanvas, 0, 0);
 
-      if (!response.ok) {
-        const error = await response.json();
-        console.error('API Error:', error);
+    // Décoder de manière synchrone dans la fonction (comme dans le code fonctionnel)
+    const decodeCanvas = async () => {
+      try {
+        const result: Result = await codeReader.current.decodeFromCanvas(displayCanvas);
+        const decodedText = result.getText();
         
-        if (error.message?.includes('déjà entré')) {
-          return 'already-used';
-        } else if (error.message?.includes('non trouvé')) {
-          return 'invalid';
-        } else {
-          return 'invalid';
+        // Éviter les scans multiples du même code
+        if (decodedText && decodedText !== lastScannedCode) {
+          console.log('🎯 QR Code détecté:', decodedText);
+          setLastScannedCode(decodedText);
+          
+          // Appeler la fonction de callback avec le code scanné
+          if (onScan) {
+            onScan(decodedText);
+          }
+        }
+      } catch (err: unknown) {
+        // Ignorer les erreurs "NotFoundException" (pas de QR code trouvé)
+        if (err instanceof Error && err.name !== "NotFoundException") {
+          console.error("❌ Decoding error:", err);
         }
       }
+    };
 
-      const result = await response.json();
-      console.log('API Success:', result);
-      return 'success';
-    } catch (error) {
-      console.error('Network Error:', error);
-      toast.error('Erreur de connexion. Vérifiez votre connexion internet.');
-      return 'invalid';
-    }
-  }, []);
+    // Appeler decodeCanvas directement (comme dans le code fonctionnel)
+    decodeCanvas();
+  }, [lastScannedCode, onScan]);
 
-  // Reset scan result
-  const resetScanResult = useCallback(() => {
-    console.log('🔄 Reset scan result');
-    setScanResult(null);
-    setScannedTicket('');
-    processingRef.current = false;
-    setIsProcessing(false);
-  }, [processingRef]);
+  // Effet principal inspiré du code fonctionnel
+  const hasStartedCameraRef = useRef(false);
 
-  // Fonction principale de traitement
-  const handleScan = useCallback(async (ticketId: string) => {
-    console.log('🎫 Traitement du billet:', ticketId);
-    
-    if (processingRef.current) {
-      console.log('⚠️ Traitement déjà en cours, ignoré');
+  useEffect(() => {
+    if (!isActive) {
+      // Nettoyage standard
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+      if (videoRef.current?.srcObject) {
+        const tracks = (videoRef.current.srcObject as MediaStream).getTracks();
+        tracks.forEach((track) => track.stop());
+        videoRef.current.srcObject = null;
+      }
+      hasStartedCameraRef.current = false; // ✅ reset si on désactive
+      setLastScannedCode(null);
       return;
     }
-    
-    processingRef.current = true;
-    setIsProcessing(true);
-    setScannedTicket(ticketId);
-    
-    // Arrêter le scanner immédiatement
-    setIsScanning(false);
-    
-    try {
-      const result = await scanTicket(ticketId);
-      setScanResult(result);
 
-      // Show toast notifications
-      if (result === 'success') {
-        toast.success(`Billet ${ticketId} validé avec succès`);
-        onScanSuccess?.(ticketId);
-      } else if (result === 'already-used') {
-        toast.error(`Le billet ${ticketId} a déjà été scanné`);
-      } else {
-        toast.error(`Le billet ${ticketId} n'est pas valide`);
-      }
+    // ✅ éviter double appel
+    if (hasStartedCameraRef.current) return;
+    hasStartedCameraRef.current = true;
 
-      // Reset après 3 secondes
-      setTimeout(() => {
-        resetScanResult();
-      }, 3000);
-    } catch (error) {
-      console.error('Erreur lors du scan:', error);
-      toast.error('Erreur lors du traitement du billet');
-      onScanError?.('Erreur lors du traitement du billet');
-      resetScanResult();
-    }
-  }, [scanTicket, resetScanResult, onScanSuccess, onScanError]);
-
-  // Démarrer la caméra
-  const startCamera = useCallback(async () => {
-    if (isScanning) return;
-    
-    try {
-      setError(null);
-      setIsScanning(true);
-      
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { 
-          facingMode: { ideal: "environment" },
-          width: { ideal: 1280 },
-          height: { ideal: 720 }
-        },
-      });
-      
-      streamRef.current = stream;
-      
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        videoRef.current.onloadedmetadata = () => {
-          videoRef.current?.play();
-        };
-      }
-      
-      // Démarrer la lecture des codes
-      startDecoding();
-      
-    } catch (err) {
-      console.error("Camera error:", err);
-      setError("Impossible d'accéder à la caméra. Vérifiez les permissions.");
-      setIsScanning(false);
-      onScanError?.("Impossible d'accéder à la caméra");
-    }
-  }, [isScanning, onScanError]);
-
-  // Arrêter la caméra
-  const stopCamera = useCallback(() => {
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach(track => track.stop());
-      streamRef.current = null;
-    }
-    setIsScanning(false);
-  }, []);
-
-  // Démarrer la lecture des codes
-  const startDecoding = useCallback(() => {
-    if (!videoRef.current) return;
-
-    const decode = async () => {
-      if (!isScanning || processingRef.current) return;
-
+    const startCamera = async () => {
       try {
-        await codeReader.current.decodeFromVideoElement(videoRef.current!, (result, error) => {
-          if (result) {
-            console.log('QR Code détecté:', result.getText());
-            handleScan(result.getText());
-          }
-          if (error && error.name !== "NotFoundException") {
-            console.error("Decoding error:", error);
-          }
+        setError(null);
+        setLastScannedCode(null);
+        console.log('📷 Démarrage de la caméra...');
+
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: { ideal: "environment" },
+            width: { ideal: 1280 },
+            height: { ideal: 720 },
+          },
         });
-      } catch (err: unknown) {
-        console.error("Decoding setup error:", err);
+
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+
+          videoRef.current.onloadedmetadata = async () => {
+            try {
+              await videoRef.current?.play();
+              console.log("📹 Vidéo prête, démarrage du décodage...");
+              intervalRef.current = setInterval(captureFrameAndDecode, 100);
+            } catch (playError) {
+              console.error("❌ Erreur lors du démarrage de la vidéo:", playError);
+              setError("Impossible de démarrer la vidéo. Autorisez l'accès à la caméra.");
+            }
+          };
+        }
+      } catch (err) {
+        console.error("❌ Camera error:", err);
+        setError("Impossible d'accéder à la caméra. Vérifiez les permissions.");
       }
     };
 
-    decode();
-  }, [isScanning, handleScan, processingRef]);
+    startCamera();
 
-  // Cleanup
-  useEffect(() => {
     return () => {
-      stopCamera();
+      if (videoRef.current?.srcObject) {
+        const tracks = (videoRef.current.srcObject as MediaStream).getTracks();
+        tracks.forEach((track) => track.stop());
+      }
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
+      hasStartedCameraRef.current = false;
     };
-  }, [stopCamera]);
+  }, [isActive, captureFrameAndDecode]);
 
-  // Auto-connect si demandé
-  useEffect(() => {
-    if (autoConnect && !isScanning && !error) {
-      startCamera();
-    }
-  }, [autoConnect, isScanning, error, startCamera]);
+
+  if (!isActive) {
+    return (
+      <div className="w-full h-full flex items-center justify-center">
+        <p className="text-gray-500">Scanner inactif</p>
+      </div>
+    );
+  }
 
   return (
-    <Card className="w-full max-w-md mx-auto">
-      <CardContent className="p-6">
-        <div className="flex flex-col items-center space-y-4">
-          <h3 className="text-lg font-semibold text-gray-900">
-            Scanner QR Code
-          </h3>
-
-          {!isScanning && !scanResult && (
-            <Button
-              onClick={startCamera}
-              className="w-full"
-              disabled={isProcessing}
-            >
-              <Camera className="w-4 h-4 mr-2" />
-              Démarrer le scanner
-            </Button>
-          )}
-
-          {isScanning && (
-            <div className="relative w-full">
-              <video
-                ref={videoRef}
-                autoPlay
-                playsInline
-                muted
-                className="w-full h-64 object-cover rounded-lg border-2 border-blue-500"
-              />
-              <div className="absolute inset-0 border-2 border-white rounded-lg pointer-events-none">
-                <div className="absolute inset-4 border-2 border-blue-500 rounded-lg"></div>
-              </div>
-            </div>
-          )}
-
-          {error && (
-            <div className="flex items-center space-x-2 text-red-600 text-sm">
-              <XCircle className="w-4 h-4" />
-              <span>{error}</span>
-            </div>
-          )}
-
-          {isProcessing && (
-            <div className="flex items-center space-x-2 text-blue-600">
-              <LoadingSpinner size="sm" />
-              <span>Traitement en cours...</span>
-            </div>
-          )}
-
-          {scanResult && (
-            <div className={`w-full p-4 rounded-lg border-2 ${
-              scanResult === 'success' 
-                ? 'border-green-500 bg-green-50 text-green-700' 
-                : 'border-red-500 bg-red-50 text-red-700'
-            }`}>
-              <div className="flex items-center space-x-2">
-                {scanResult === 'success' ? (
-                  <CheckCircle className="w-5 h-5" />
-                ) : (
-                  <XCircle className="w-5 h-5" />
-                )}
-                <span className="font-medium">
-                  {scanResult === 'success' && `Billet ${scannedTicket} validé`}
-                  {scanResult === 'already-used' && `Billet ${scannedTicket} déjà utilisé`}
-                  {scanResult === 'invalid' && `Billet ${scannedTicket} invalide`}
-                </span>
-              </div>
-            </div>
-          )}
-
-          {isScanning && (
-            <Button
-              onClick={stopCamera}
-              variant="outline"
-              className="w-full"
-            >
-              <RotateCcw className="w-4 h-4 mr-2" />
-              Arrêter le scanner
-            </Button>
-          )}
+    <div className="w-full h-full">
+      <div className="relative w-full h-full">
+        <video
+          ref={videoRef}
+          autoPlay
+          playsInline
+          muted
+          className="w-full h-full object-cover"
+        />
+        <div className="absolute inset-0 border-2 border-white rounded-lg pointer-events-none">
+          <div className="absolute inset-4 border-2 border-blue-500 rounded-lg"></div>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+
+      <canvas
+        ref={displayCanvasRef}
+        className="w-full h-32 object-cover rounded-lg border-2 border-green-500 mt-2"
+        style={{
+          border: "2px solid #10b981",
+          borderRadius: "0.5rem",
+          maxWidth: "100%",
+          height: "auto",
+          display: "block",
+        }}
+      />
+
+      {error && (
+        <div className="flex items-center space-x-2 text-red-600 text-sm p-3 bg-red-50 rounded-lg mt-2">
+          <span>{error}</span>
+        </div>
+      )}
+
+      {lastScannedCode && (
+        <div className="mt-2 p-3 bg-green-50 border-2 border-green-200 rounded-lg">
+          <p className="text-green-800 font-medium">✅ Code scanné : {lastScannedCode}</p>
+        </div>
+      )}
+    </div>
   );
-} 
+}

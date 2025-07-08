@@ -189,11 +189,6 @@ export default function ScanEntry() {
     handleScan(decodedText);
   }, [handleScan]);
 
-  const handleQRScanError = useCallback((error: string) => {
-    console.error('❌ QR Scan error:', error);
-    toast.error('Erreur lors du scan du QR code');
-  }, []);
-
   // Handlers pour contrôler le scanner
   const startCamera = useCallback(() => {
     console.log('📷 Démarrage du scanner...');
@@ -250,9 +245,8 @@ export default function ScanEntry() {
               {isScanning && !scanResult && (
                 <div className="absolute inset-0">
                   <ZxingQRScanner
-                    onScanSuccess={handleQRScanSuccess}
-                    onScanError={handleQRScanError}
-                    autoConnect={true}
+                    onScan={handleQRScanSuccess}
+                    isActive={isScanning}
                   />
                 </div>
               )}
@@ -305,7 +299,7 @@ export default function ScanEntry() {
                 <>
                   {/* Boutons de contrôle du scanner */}
                   <div className="flex gap-3">
-                  <Button
+                    <Button
                       onClick={startCamera}
                       disabled={processingRef.current || isScanning}
                       className={cn(
