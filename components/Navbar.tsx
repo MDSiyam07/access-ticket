@@ -15,7 +15,7 @@ import {
   Settings,
   LogIn,
   LogOut,
-  Camera
+  Shield
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -27,13 +27,35 @@ export default function Navbar({ children }: NavbarProps) {
   const { user, logout, isAuthenticated, isLoading, isAdmin, isEntryUser, isExitUser, isReentryUser } = useAuth();
   const pathname = usePathname();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [redirecting, setRedirecting] = useState(false);
 
   // Redirect to login if not authenticated (except for login page)
   useEffect(() => {
+    // Éviter les redirections multiples
+    if (redirecting) return;
+
     if (!isLoading && !isAuthenticated && pathname !== '/login') {
-      window.location.href = '/login';
+      setRedirecting(true);
+      // Utiliser un délai pour éviter les conflits sur Android
+      setTimeout(() => {
+        window.location.href = '/login';
+      }, 100);
     }
-  }, [isAuthenticated, isLoading, pathname]);
+  }, [isAuthenticated, isLoading, pathname, redirecting]);
+
+  // Vérification de sécurité pour éviter les boucles infinies
+  useEffect(() => {
+    if (!isLoading && !redirecting) {
+      const safetyTimer = setTimeout(() => {
+        if (isLoading) {
+          console.warn('Navbar loading state stuck - forcing reset');
+          setRedirecting(false);
+        }
+      }, 3000);
+
+      return () => clearTimeout(safetyTimer);
+    }
+  }, [isLoading, redirecting]);
 
   // Don't render navbar on login page
   if (pathname === '/login') {
@@ -55,8 +77,8 @@ export default function Navbar({ children }: NavbarProps) {
     );
   }
 
-  // Don't render if not authenticated
-  if (!isAuthenticated) {
+  // Don't render if not authenticated or redirecting
+  if (!isAuthenticated || redirecting) {
     return null;
   }
 
@@ -69,7 +91,6 @@ export default function Navbar({ children }: NavbarProps) {
         { name: 'Scan Sortie', href: '/scan-exit', icon: LogOut },
         { name: 'Historique', href: '/history', icon: History },
         { name: 'Saisie Manuelle', href: '/manual-entry', icon: Edit3 },
-        { name: 'Test Caméra', href: '/camera-test', icon: Camera },
         { name: 'Administration', href: '/admin', icon: Settings },
       ];
     } else if (isEntryUser) {
@@ -77,21 +98,18 @@ export default function Navbar({ children }: NavbarProps) {
         { name: 'Statistiques', href: '/dashboard', icon: BarChart3 },
         { name: 'Scan Entrée', href: '/scan-entry', icon: LogIn },
         { name: 'Saisie Manuelle', href: '/manual-entry', icon: Edit3 },
-        { name: 'Test Caméra', href: '/camera-test', icon: Camera },
       ];
     } else if (isExitUser) {
       return [
         { name: 'Statistiques', href: '/dashboard', icon: BarChart3 },
         { name: 'Scan Sortie', href: '/scan-exit', icon: LogOut },
         { name: 'Saisie Manuelle', href: '/manual-entry', icon: Edit3 },
-        { name: 'Test Caméra', href: '/camera-test', icon: Camera },
       ];
     } else if (isReentryUser) {
       return [
         { name: 'Statistiques', href: '/dashboard', icon: BarChart3 },
         { name: 'Scan Entrée', href: '/scan-entry', icon: LogIn },
         { name: 'Saisie Manuelle', href: '/manual-entry', icon: Edit3 },
-        { name: 'Test Caméra', href: '/camera-test', icon: Camera },
       ];
     }
 
@@ -169,10 +187,10 @@ export default function Navbar({ children }: NavbarProps) {
       {/* Mobile menu overlay */}
       {isMobileMenuOpen && (
         <div 
-          className="lg:hidden fixed inset-0 z-50 bg-black/20 backdrop-blur-sm" 
+          className="lg:hidden fixed inset-0 z-50 bg-gray-900/40 backdrop-blur-2xl" 
           onClick={handleOverlayClick}
         >
-          <div className="fixed inset-y-0 left-0 w-72 glass-card shadow-2xl" onClick={handleMenuClick}>
+          <div className="fixed inset-y-0 left-0 w-72 bg-gray-900/60 backdrop-blur-2xl shadow-2xl rounded-r-3xl" onClick={handleMenuClick}>
             <div className="flex flex-col h-full">
               {/* Logo */}
               <div className="flex items-center px-6 py-4 border-b border-border/50">
@@ -180,10 +198,30 @@ export default function Navbar({ children }: NavbarProps) {
                   <ScanLine className="w-6 h-6 text-modern-violet-600" />
                 </div>
                 <span className="ml-3 text-lg font-semibold gradient-text">AccessTicket</span>
-                <div className="ml-3 flex items-center gap-1 bg-modern-violet-100 text-modern-violet-800 px-3 py-1 rounded-2xl text-xs font-medium border border-modern-violet-200">
-                  <span className={`w-2 h-2 rounded-full ${getRoleColor().replace('text-', 'bg-')}`}></span>
-                  {getUserRoleDisplay()}
-                </div>
+                {isAdmin && (
+                  <div className="ml-3 flex items-center gap-1 bg-modern-violet-100 text-modern-violet-800 px-3 py-1 rounded-2xl text-xs font-medium border border-modern-violet-200">
+                    <Shield className="w-3 h-3" />
+                    Admin
+                  </div>
+                )}
+                {isEntryUser && (
+                  <div className="ml-3 flex items-center gap-1 bg-modern-cyan-100 text-modern-cyan-800 px-3 py-1 rounded-2xl text-xs font-medium border border-modern-cyan-200">
+                    <LogIn className="w-3 h-3" />
+                    Entrée
+                  </div>
+                )}
+                {isExitUser && (
+                  <div className="ml-3 flex items-center gap-1 bg-modern-gold-100 text-modern-gold-800 px-3 py-1 rounded-2xl text-xs font-medium border border-modern-gold-200">
+                    <LogOut className="w-3 h-3" />
+                    Sortie
+                  </div>
+                )}
+                {isReentryUser && (
+                  <div className="ml-3 flex items-center gap-1 bg-modern-green-100 text-modern-green-800 px-3 py-1 rounded-2xl text-xs font-medium border border-modern-green-200">
+                    <LogIn className="w-3 h-3" />
+                    Ré-entrée
+                  </div>
+                )}
               </div>
 
               {/* Navigation */}
@@ -195,10 +233,10 @@ export default function Navbar({ children }: NavbarProps) {
                       key={item.name}
                       href={item.href}
                       onClick={closeMobileMenu}
-                      className={`flex items-center px-4 py-3 text-sm font-medium rounded-2xl transition-all duration-300 ${
+                      className={`flex items-center px-4 py-3 text-sm font-medium rounded-2xl transition-all duration-300 text-white ${
                         isActive
-                          ? 'bg-modern-violet-500 text-white shadow-lg'
-                          : 'text-foreground hover:bg-modern-violet-50 hover:scale-105'
+                          ? 'bg-modern-violet-500 shadow-lg'
+                          : 'hover:bg-modern-violet-50 hover:scale-105'
                       }`}
                     >
                       <item.icon className="w-5 h-5 mr-3" />
@@ -217,9 +255,20 @@ export default function Navbar({ children }: NavbarProps) {
                     </span>
                   </div>
                   <div className="ml-3">
-                    <p className="text-sm font-medium text-foreground">{user?.name}</p>
-                    <p className="text-xs text-muted-foreground">{user?.email}</p>
-                    <p className={`text-xs font-medium ${getRoleColor()}`}>{getUserRoleDisplay()}</p>
+                    <p className="text-sm font-medium text-white">{user?.name}</p>
+                    <p className="text-xs text-white">{user?.email}</p>
+                    {isAdmin && (
+                      <p className="text-xs text-modern-violet-600 font-medium">Administrateur</p>
+                    )}
+                    {isEntryUser && (
+                      <p className="text-xs text-modern-cyan-600 font-medium">Contrôleur Entrées</p>
+                    )}
+                    {isExitUser && (
+                      <p className="text-xs text-modern-gold-600 font-medium">Contrôleur Sorties</p>
+                    )}
+                    {isReentryUser && (
+                      <p className="text-xs text-modern-green-600 font-medium">Contrôleur Ré-entrées</p>
+                    )}
                   </div>
                 </div>
                 <Button
@@ -243,15 +292,35 @@ export default function Navbar({ children }: NavbarProps) {
           <div className="flex flex-col w-full">
             <div className="flex flex-col flex-grow bg-white border-r border-gray-200">
               {/* Logo */}
-              <div className="flex items-center flex-shrink-0 px-6 py-4 border-b border-gray-200">
-                <div className="w-8 h-8 bg-festival-blue rounded-lg flex items-center justify-center">
-                  <ScanLine className="w-5 h-5 text-white" />
+              <div className="flex items-center px-6 py-4 border-b border-border/50">
+                <div className="bg-black/40 rounded-2xl w-10 h-10 flex items-center justify-center">
+                  <ScanLine className="w-6 h-6 text-white" />
                 </div>
-                <span className="ml-3 text-xl font-semibold text-gray-900">AccessTicket</span>
-                <div className="ml-2 flex items-center gap-1 bg-modern-violet-100 text-modern-violet-800 px-2 py-1 rounded-full text-xs font-medium border border-modern-violet-200">
-                  <span className={`w-2 h-2 rounded-full ${getRoleColor().replace('text-', 'bg-')}`}></span>
-                  {getUserRoleDisplay()}
-                </div>
+                <span className="ml-3 text-lg font-semibold text-white">AccessTicket</span>
+                {isAdmin && (
+                  <div className="ml-3 flex items-center gap-1 bg-purple-700/80 text-white px-3 py-1 rounded-2xl text-sm font-medium border border-purple-400 max-w-[110px] overflow-hidden text-ellipsis">
+                    <Shield className="w-4 h-4" />
+                    Admin
+                  </div>
+                )}
+                {isEntryUser && (
+                  <div className="ml-3 flex items-center gap-1 bg-cyan-700/80 text-white px-3 py-1 rounded-2xl text-sm font-medium border border-cyan-400 max-w-[110px] overflow-hidden text-ellipsis">
+                    <LogIn className="w-4 h-4" />
+                    Entrée
+                  </div>
+                )}
+                {isExitUser && (
+                  <div className="ml-3 flex items-center gap-1 bg-yellow-700/80 text-white px-3 py-1 rounded-2xl text-sm font-medium border border-yellow-400 max-w-[110px] overflow-hidden text-ellipsis">
+                    <LogOut className="w-4 h-4" />
+                    Sortie
+                  </div>
+                )}
+                {isReentryUser && (
+                  <div className="ml-3 flex items-center gap-1 bg-green-700/80 text-white px-3 py-1 rounded-2xl text-sm font-medium border border-green-400 max-w-[110px] overflow-hidden text-ellipsis">
+                    <LogIn className="w-4 h-4" />
+                    Ré-entrée
+                  </div>
+                )}
               </div>
 
               {/* Navigation */}

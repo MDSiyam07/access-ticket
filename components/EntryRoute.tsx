@@ -1,7 +1,7 @@
 'use client';
 
 import { useAuth } from '@/app/contexts/AuthContext';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { LogIn, ArrowRight } from 'lucide-react';
 
 interface EntryRouteProps {
@@ -11,14 +11,39 @@ interface EntryRouteProps {
 
 export default function EntryRoute({ children, fallback }: EntryRouteProps) {
   const { isEntryUser, isReentryUser, isAdmin, isAuthenticated, isLoading } = useAuth();
+  const [redirecting, setRedirecting] = useState(false);
 
   useEffect(() => {
+    // Éviter les redirections multiples
+    if (redirecting) return;
+
     if (!isLoading && !isAuthenticated) {
-      window.location.href = '/login';
+      setRedirecting(true);
+      // Utiliser un délai pour éviter les conflits sur Android
+      setTimeout(() => {
+        window.location.href = '/login';
+      }, 100);
     } else if (!isLoading && isAuthenticated && !isEntryUser && !isReentryUser && !isAdmin) {
-      window.location.href = '/dashboard';
+      setRedirecting(true);
+      setTimeout(() => {
+        window.location.href = '/dashboard';
+      }, 100);
     }
-  }, [isEntryUser, isReentryUser, isAdmin, isAuthenticated, isLoading]);
+  }, [isEntryUser, isReentryUser, isAdmin, isAuthenticated, isLoading, redirecting]);
+
+  // Vérification de sécurité pour éviter les boucles infinies
+  useEffect(() => {
+    if (!isLoading && !redirecting) {
+      const safetyTimer = setTimeout(() => {
+        if (isLoading) {
+          console.warn('EntryRoute loading state stuck - forcing reset');
+          setRedirecting(false);
+        }
+      }, 3000);
+
+      return () => clearTimeout(safetyTimer);
+    }
+  }, [isLoading, redirecting]);
 
   if (isLoading) {
     return (
@@ -31,7 +56,7 @@ export default function EntryRoute({ children, fallback }: EntryRouteProps) {
     );
   }
 
-  if (!isAuthenticated) {
+  if (!isAuthenticated || redirecting) {
     return null; // Will redirect to login
   }
 

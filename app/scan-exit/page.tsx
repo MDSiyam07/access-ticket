@@ -37,9 +37,10 @@ export default function ScanExit() {
   useEffect(() => {
     setIsClient(true);
     
+    // Réduire le délai de chargement pour Android
     const timer = setTimeout(() => {
       setIsLoading(false);
-    }, 1000);
+    }, 500); // Réduit de 1000ms à 500ms
 
     return () => {
       if (timeoutRef.current) {
@@ -48,6 +49,21 @@ export default function ScanExit() {
       clearTimeout(timer);
     };
   }, []);
+
+  // Vérification de sécurité pour éviter les boucles infinies
+  useEffect(() => {
+    if (isClient && !isLoading) {
+      // Vérifier que l'authentification est stable
+      const authCheck = setTimeout(() => {
+        if (isLoading) {
+          console.warn('Loading state stuck - forcing reset');
+          setIsLoading(false);
+        }
+      }, 3000);
+
+      return () => clearTimeout(authCheck);
+    }
+  }, [isClient, isLoading]);
 
   // Fonction de scan réelle avec l'API
   const scanTicketExit = useCallback(async (ticketId: string): Promise<ScanResult> => {

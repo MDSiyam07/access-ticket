@@ -181,3 +181,8 @@
 .read-the-docs {
   color: #888;
 }
+
+.backdrop-blur-max {
+  backdrop-filter: blur(120px) !important;
+  -webkit-backdrop-filter: blur(120px) !important;
+}

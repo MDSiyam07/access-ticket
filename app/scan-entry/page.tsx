@@ -35,11 +35,14 @@ export default function ScanEntry() {
 
   // Ensure we're on the client side
   useEffect(() => {
+    console.log("Standalone mode:", window.matchMedia('(display-mode: standalone)').matches);
+
     setIsClient(true);
     
+    // Réduire le délai de chargement pour Android
     const timer = setTimeout(() => {
       setIsLoading(false);
-    }, 1000);
+    }, 500); // Réduit de 1000ms à 500ms
 
     return () => {
       if (timeoutRef.current) {
@@ -48,6 +51,21 @@ export default function ScanEntry() {
       clearTimeout(timer);
     };
   }, []);
+
+  // Vérification de sécurité pour éviter les boucles infinies
+  useEffect(() => {
+    if (isClient && !isLoading) {
+      // Vérifier que l'authentification est stable
+      const authCheck = setTimeout(() => {
+        if (isLoading) {
+          console.warn('Loading state stuck - forcing reset');
+          setIsLoading(false);
+        }
+      }, 3000);
+
+      return () => clearTimeout(authCheck);
+    }
+  }, [isClient, isLoading]);
 
   // Fonction de scan réelle avec l'API
   const scanTicket = useCallback(async (ticketId: string): Promise<ScanResult> => {
@@ -130,15 +148,9 @@ export default function ScanEntry() {
       const result = await scanTicket(ticketId);
       setScanResult(result);
 
-      // Show toast notifications
+      // Trigger stats refresh on success
       if (result === 'success') {
-        toast.success(`Billet ${ticketId} validé avec succès`);
-        // Trigger stats refresh
         setRefreshTrigger(prev => prev + 1);
-      } else if (result === 'already-used') {
-        toast.error(`Le billet ${ticketId} a déjà été scanné`);
-      } else {
-        toast.error(`Le billet ${ticketId} n'est pas valide`);
       }
 
       // Reset après 3 secondes
@@ -147,7 +159,6 @@ export default function ScanEntry() {
       }, 3000);
     } catch (error) {
       console.error('Erreur lors du scan:', error);
-      toast.error('Erreur lors du traitement du billet');
       resetScanResult();
     }
   }, [scanTicket, resetScanResult]);
