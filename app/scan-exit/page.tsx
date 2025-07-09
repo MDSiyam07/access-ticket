@@ -6,13 +6,13 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Camera, CheckCircle, XCircle, Type, Square } from 'lucide-react';
 import toast from 'react-hot-toast';
-import ControlledQRScanner from '@/components/ControlledQRScanner';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import QuickStats from '@/components/QuickStats';
 import ExitRoute from '@/components/ExitRoute';
 import { cn } from '@/lib/utils';
 import { offlineStorage } from '@/lib/offlineStorage';
 import { useAuth } from '@/app/contexts/AuthContext';
+import ZxingQRScanner from '@/components/ZxingQRScanner';
 
 type ScanResult = 'success' | 'not-inside' | 'invalid' | null;
 
@@ -197,11 +197,6 @@ export default function ScanExit() {
     handleScan(decodedText);
   }, [handleScan]);
 
-  const handleQRScanError = useCallback((error: string) => {
-    console.error('QR Scan error:', error);
-    toast.error('Erreur lors du scan du QR code');
-  }, []);
-
   const handleManualScan = useCallback(() => {
     if (manualTicket.trim()) {
       handleScan(manualTicket.trim());
@@ -232,15 +227,6 @@ export default function ScanExit() {
   const stopCamera = useCallback(() => {
     console.log('🛑 Arrêt du scanner...');
     setIsScanning(false);
-  }, []);
-
-  const handleScannerReady = useCallback(() => {
-    console.log('Scanner ready');
-  }, []);
-
-  const handleScannerError = useCallback((error: string) => {
-    console.error('Scanner error:', error);
-    toast.error('Erreur lors de la préparation du scanner');
   }, []);
 
   // Don't render until we're on the client side
@@ -316,12 +302,16 @@ export default function ScanExit() {
                 </div>
               ) : (
                 <div className={`absolute inset-0 ${scanResult ? 'invisible' : 'visible'}`}>
-                  <ControlledQRScanner
+                  {/* <ControlledQRScanner
                     onScanSuccess={handleQRScanSuccess}
                     onScanError={handleQRScanError}
                     isActive={isScanning && !scanResult}
                     onScannerReady={handleScannerReady}
                     onScannerError={handleScannerError}
+                  /> */}
+                  <ZxingQRScanner
+                    onScan={handleQRScanSuccess}
+                    isActive={isScanning && !scanResult}
                   />
                 </div>
               )}
