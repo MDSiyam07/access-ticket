@@ -18,6 +18,7 @@ import {
   Shield
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import LoadingSpinner from '@/components/LoadingSpinner';
 
 interface NavbarProps {
   children: React.ReactNode;
@@ -66,13 +67,7 @@ export default function Navbar({ children }: NavbarProps) {
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-modern-violet-50 via-modern-cyan-50 to-modern-violet-100">
-        <div className="glass-card p-8 text-center floating-animation">
-          <div className="relative">
-            <div className="animate-spin rounded-full h-16 w-16 border-4 border-modern-violet-200 border-t-modern-violet-600 mx-auto pulse-glow"></div>
-            <div className="absolute inset-0 rounded-full h-16 w-16 border-4 border-transparent border-t-modern-cyan-400 animate-spin" style={{ animationDirection: 'reverse', animationDuration: '1.5s' }}></div>
-          </div>
-          <p className="mt-6 text-lg font-semibold gradient-text">Chargement...</p>
-        </div>
+        <LoadingSpinner size="md" text="Chargement..." />
       </div>
     );
   }
@@ -91,7 +86,7 @@ export default function Navbar({ children }: NavbarProps) {
         { name: 'Scan Sortie', href: '/scan-exit', icon: LogOut },
         { name: 'Historique', href: '/history', icon: History },
         { name: 'Saisie Manuelle', href: '/manual-entry', icon: Edit3 },
-        { name: 'Administration', href: '/admin', icon: Settings },
+        { name: 'Import de fichiers', href: '/admin', icon: Settings },
       ];
     } else if (isEntryUser) {
       return [

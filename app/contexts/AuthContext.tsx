@@ -67,55 +67,47 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [initialized, setInitialized] = useState(false);
 
   useEffect(() => {
+    console.log('[AuthContext] useEffect start');
     // Check if user is already logged in (from localStorage)
     // Only run on client side
     if (typeof window !== 'undefined') {
       try {
         const savedUser = localStorage.getItem('festival-user');
+        console.log('[AuthContext] localStorage.getItem("festival-user") =', savedUser);
         if (savedUser) {
           const parsedUser = JSON.parse(savedUser);
+          console.log('[AuthContext] Parsed user:', parsedUser);
           // Vérifier que l'utilisateur existe toujours dans la configuration
           if (USERS[parsedUser.email as keyof typeof USERS]) {
             setUser(parsedUser);
             setIsAuthenticated(true);
+            console.log('[AuthContext] User authenticated');
           } else {
             // Utilisateur supprimé de la configuration, déconnecter
             localStorage.removeItem('festival-user');
+            console.log('[AuthContext] User not found in config, removed from localStorage');
           }
+        } else {
+          console.log('[AuthContext] No user in localStorage');
         }
       } catch (error) {
-        console.error('Error parsing saved user:', error);
+        console.error('[AuthContext] Error parsing saved user:', error);
         localStorage.removeItem('festival-user');
       } finally {
-        // Délai réduit pour Android
-        const timer = setTimeout(() => {
-          setIsLoading(false);
-          setInitialized(true);
-        }, 100); // Réduit de 0ms à 100ms pour éviter les conflits
-
-        return () => clearTimeout(timer);
+        setIsLoading(false);
+        console.log('[AuthContext] setIsLoading(false)');
       }
     } else {
-      // Sur le serveur, ne pas bloquer
       setIsLoading(false);
-      setInitialized(true);
+      console.log('[AuthContext] setIsLoading(false) (server)');
     }
   }, []);
 
-  // Vérification de sécurité pour éviter les boucles infinies
   useEffect(() => {
-    if (initialized && isLoading) {
-      const safetyTimer = setTimeout(() => {
-        console.warn('Auth loading state stuck - forcing reset');
-        setIsLoading(false);
-      }, 5000); // 5 secondes max
-
-      return () => clearTimeout(safetyTimer);
-    }
-  }, [initialized, isLoading]);
+    console.log('[AuthContext] isLoading changed:', isLoading);
+  }, [isLoading]);
 
   const login = async (email: string, password: string): Promise<{ success: boolean; role?: 'admin' | 'entry' | 'exit' | 'reentry' }> => {
     try {

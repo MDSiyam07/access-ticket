@@ -7,6 +7,7 @@ import TicketImport from '../../components/TicketImport';
 import ImportStats from '../../components/ImportStats';
 import AdminRoute from '../../components/AdminRoute';
 import { Shield, Users, FileText, BarChart3 } from 'lucide-react';
+import LoadingSpinner from '../../components/LoadingSpinner';
 
 export default function AdminPage() {
   const { user, isAuthenticated, isLoading } = useAuth();
@@ -21,10 +22,7 @@ export default function AdminPage() {
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Chargement...</p>
-        </div>
+        <LoadingSpinner size="md" text="Chargement..." />
       </div>
     );
   }
