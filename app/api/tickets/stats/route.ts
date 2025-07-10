@@ -11,7 +11,7 @@ export async function GET() {
       prisma.ticket.count({ where: { status: 'PENDING' } }),
       prisma.ticket.count({ where: { status: 'ENTERED' } }),
       prisma.ticket.count({ where: { status: 'EXITED' } }),
-      prisma.ticket.count({ where: { status: 'VENDU' } }),
+      prisma.ticket.count({ where: { soldAt: { not: null } } }),
     ]);
 
     return NextResponse.json({

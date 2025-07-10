@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Camera, CheckCircle, XCircle, Type, Square } from 'lucide-react';
-import toast from 'react-hot-toast';
+// import toast from 'react-hot-toast';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import ZxingQRScanner from '@/components/ZxingQRScanner';
 import QuickStats from '@/components/QuickStats';
@@ -118,7 +118,7 @@ export default function ScanEntry() {
           userId: user.id,
           userRole: user.role
         });
-        toast('Scan sauvegardé hors ligne', { icon: '📶' });
+        // Scan sauvegardé hors ligne
       }
       return 'success'; // On considère comme succès localement
     }

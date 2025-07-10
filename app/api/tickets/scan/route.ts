@@ -43,7 +43,6 @@ export async function POST(request: NextRequest) {
 
     // Logique de validation selon l'action
     if (action === 'ENTER') {
-      // Vérifier si le ticket peut entrer
       if (ticket.status === 'ENTERED') {
         return NextResponse.json(
           { error: 'Ce ticket est déjà entré.' },
@@ -51,68 +50,15 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      // Si le ticket a été validé en sortie, il peut ré-entrer
-      if (ticket.status === 'EXITED') {
-        // Permettre la ré-entrée
-        await prisma.$transaction([
-          // Mettre à jour le statut du ticket
-          prisma.ticket.update({
-            where: { id: ticket.id },
-            data: {
-              status: 'ENTERED',
-              scannedAt: new Date(),
-              entryType: entryType as 'SCAN' | 'MANUAL',
-            },
-          }),
-          // Ajouter l'historique
-          prisma.scanHistory.create({
-            data: {
-              ticketId: ticket.id,
-              action: 'ENTER',
-            },
-          }),
-        ]);
-
-        return NextResponse.json({
-          success: true,
-          message: 'Ticket validé pour entrée (ré-entrée).',
-          ticket: {
-            number: ticket.number,
-            status: 'ENTERED',
-          },
-        });
+      // N'autoriser l'entrée que si le ticket est en VENDU ou EXITED
+      if (ticket.status !== 'VENDU' && ticket.status !== 'EXITED') {
+        return NextResponse.json(
+          { error: 'Ce ticket n\'a pas été vendu. Vente obligatoire avant l\'entrée.' },
+          { status: 400 }
+        );
       }
 
-      // Si le ticket est vendu, permettre l'entrée
-      if (ticket.status === 'VENDU') {
-        await prisma.$transaction([
-          prisma.ticket.update({
-            where: { id: ticket.id },
-            data: {
-              status: 'ENTERED',
-              scannedAt: new Date(),
-              entryType: entryType as 'SCAN' | 'MANUAL',
-            },
-          }),
-          prisma.scanHistory.create({
-            data: {
-              ticketId: ticket.id,
-              action: 'ENTER',
-            },
-          }),
-        ]);
-
-        return NextResponse.json({
-          success: true,
-          message: 'Ticket vendu validé pour entrée.',
-          ticket: {
-            number: ticket.number,
-            status: 'ENTERED',
-          },
-        });
-      }
-
-      // Première entrée (ticket PENDING)
+      // Permettre la première entrée ou la ré-entrée
       await prisma.$transaction([
         prisma.ticket.update({
           where: { id: ticket.id },

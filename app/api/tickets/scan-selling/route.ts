@@ -5,31 +5,12 @@ const prisma = new PrismaClient();
 
 export async function POST(request: NextRequest) {
   try {
-    const { ticketNumber, userId } = await request.json();
+    const { ticketNumber } = await request.json();
 
     if (!ticketNumber) {
       return NextResponse.json(
         { error: 'Numéro de ticket requis' },
         { status: 400 }
-      );
-    }
-
-    // Vérifier que l'utilisateur existe et a le bon rôle
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-    });
-
-    if (!user) {
-      return NextResponse.json(
-        { error: 'Utilisateur non trouvé' },
-        { status: 404 }
-      );
-    }
-
-    if (user.role !== 'VENDEUR' && user.role !== 'ADMIN') {
-      return NextResponse.json(
-        { error: 'Permissions insuffisantes' },
-        { status: 403 }
       );
     }
 
@@ -58,7 +39,7 @@ export async function POST(request: NextRequest) {
       where: { id: ticket.id },
       data: {
         status: 'VENDU',
-        scannedAt: new Date(),
+        soldAt: new Date(),
       },
     });
 
@@ -66,7 +47,7 @@ export async function POST(request: NextRequest) {
     await prisma.scanHistory.create({
       data: {
         ticketId: ticket.id,
-        action: 'ENTER', // On utilise ENTER pour indiquer que le ticket a été vendu
+        action: 'ENTER', // ou 'SELL' si tu veux une action spéciale
       },
     });
 

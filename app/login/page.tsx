@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ScanLine, Eye, EyeOff, Shield, LogIn, LogOut, RefreshCw } from 'lucide-react';
-import toast from 'react-hot-toast';
+// import toast from 'react-hot-toast';
 
 export default function Login() {
   const { login } = useAuth();
@@ -37,16 +37,16 @@ export default function Login() {
           redirectPath = '/scan-selling';
         }
         
-        toast.success("Connexion réussie - Bienvenue dans le système de contrôle d'accès !");
+        // Connexion réussie
         
         // Forcer la redirection immédiatement
         window.location.href = redirectPath;
       } else {
-        toast.error("Email ou mot de passe incorrect");
+        // Email ou mot de passe incorrect
       }
     } catch (error) {
       console.error(error);
-      toast.error("Une erreur est survenue lors de la connexion");
+      // Une erreur est survenue lors de la connexion
     } finally {
       setIsLoading(false);
     }

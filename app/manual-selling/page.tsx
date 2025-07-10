@@ -62,24 +62,7 @@ export default function ManualSelling() {
       setIsProcessing(false);
 
       if (result.status === 'success') {
-        toast.success(result.message, {
-          duration: 4000,
-          icon: '✅',
-          style: {
-            background: '#10b981',
-            color: 'white',
-          },
-        });
         setTicketId('');
-      } else {
-        toast.error(result.message, {
-          duration: 4000,
-          icon: '❌',
-          style: {
-            background: '#ef4444',
-            color: 'white',
-          },
-        });
       }
     } catch (error) {
       console.error('Erreur lors de la vente:', error);
@@ -90,14 +73,7 @@ export default function ManualSelling() {
       };
       setLastResult(result);
       setIsProcessing(false);
-      toast.error('Erreur de connexion au serveur', {
-        duration: 4000,
-        icon: '❌',
-        style: {
-          background: '#ef4444',
-          color: 'white',
-        },
-      });
+      // Erreur de connexion au serveur
     }
   };
 

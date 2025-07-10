@@ -8,7 +8,7 @@ import { Button } from '../../components/ui/button';
 import { Card, CardContent } from '../../components/ui/card';
 import { Input } from '../../components/ui/input';
 import { Camera, CheckCircle, XCircle, Type, Square } from 'lucide-react';
-import toast from 'react-hot-toast';
+// import toast from 'react-hot-toast';
 import { cn } from '../../lib/utils';
 
 export default function ScanSellingPage() {
@@ -57,19 +57,14 @@ export default function ScanSellingPage() {
         }),
       });
 
-      const data = await response.json();
-
       if (response.ok) {
         setScanResult('success');
-        toast.success(`Ticket ${ticketId} marqué comme vendu avec succès !`);
       } else {
         setScanResult('error');
-        toast.error(`Erreur: ${data.error || 'Erreur lors de la vente'}`);
       }
     } catch (error) {
       console.error('Erreur lors du scan:', error);
       setScanResult('error');
-      toast.error('Erreur lors du scan du ticket');
     } finally {
       setIsProcessing(false);
       processingRef.current = false;

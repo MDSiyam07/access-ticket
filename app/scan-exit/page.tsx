@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Camera, CheckCircle, XCircle, Type, Square } from 'lucide-react';
-import toast from 'react-hot-toast';
+// import toast from 'react-hot-toast';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import QuickStats from '@/components/QuickStats';
 import ExitRoute from '@/components/ExitRoute';
@@ -111,7 +111,7 @@ export default function ScanExit() {
           userId: user.id,
           userRole: user.role
         });
-        toast('Scan sauvegardé hors ligne', { icon: '📶' });
+        // Scan sauvegardé hors ligne
       }
       return 'success'; // On considère comme succès localement
     }
@@ -148,37 +148,9 @@ export default function ScanExit() {
       const result = await scanTicketExit(ticketId);
       setScanResult(result);
 
-      // Show toast notifications
+      // Trigger stats refresh on success
       if (result === 'success') {
-        toast.success(`Sortie validée - Billet ${ticketId}`, {
-          duration: 4000,
-          icon: '✅',
-          style: {
-            background: '#10b981',
-            color: 'white',
-          },
-        });
-        // Trigger stats refresh
         setRefreshTrigger(prev => prev + 1);
-
-      } else if (result === 'not-inside') {
-        toast.error(`Personne non présente - Billet ${ticketId}`, {
-          duration: 4000,
-          icon: '⚠️',
-          style: {
-            background: '#6b7280',
-            color: 'white',
-          },
-        });
-      } else {
-        toast.error(`Billet invalide - ${ticketId}`, {
-          duration: 4000,
-          icon: '❌',
-          style: {
-            background: '#ef4444',
-            color: 'white',
-          },
-        });
       }
 
       // Reset après 3 secondes
@@ -187,7 +159,6 @@ export default function ScanExit() {
       }, 3000);
     } catch (error) {
       console.error('Erreur lors du scan:', error);
-      toast.error('Erreur lors du traitement du billet');
       resetScanResult();
     }
   }, [scanTicketExit, resetScanResult]);

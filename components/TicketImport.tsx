@@ -3,7 +3,7 @@
 import { useState, useRef } from 'react';
 import Papa from 'papaparse';
 import * as XLSX from 'xlsx';
-import toast from 'react-hot-toast';
+// import toast from 'react-hot-toast';
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 interface TicketData {
@@ -28,7 +28,6 @@ export default function TicketImport() {
       const tickets = await readFile(file);
       
       if (tickets.length === 0) {
-        toast.error('Aucun numéro de ticket trouvé dans le fichier');
         return;
       }
 
@@ -49,12 +48,10 @@ export default function TicketImport() {
         throw new Error(error.message || 'Erreur lors de l\'import');
       }
 
-      const result = await response.json();
+      await response.json();
       setUploadProgress(100);
 
-      toast.success(
-        `${result.imported} tickets importés avec succès. ${result.duplicates} doublons ignorés.`
-      );
+      // Import réussi
 
       // Reset form
       if (fileInputRef.current) {
@@ -63,8 +60,7 @@ export default function TicketImport() {
 
     } catch (error) {
       console.error('Erreur lors de l\'import:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Erreur lors de l\'import';
-      toast.error(errorMessage);
+      // Erreur lors de l'import
     } finally {
       setIsUploading(false);
       setUploadProgress(0);

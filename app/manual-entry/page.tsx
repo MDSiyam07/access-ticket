@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Edit3, CheckCircle, AlertCircle } from 'lucide-react';
 import ManualEntryRoute from '@/components/ManualEntryRoute';
-import toast from 'react-hot-toast';
+// import toast from 'react-hot-toast';
 
 export default function ManualEntry() {
   const [ticketId, setTicketId] = useState('');
@@ -25,10 +25,6 @@ export default function ManualEntry() {
     e.preventDefault();
     
     if (!ticketId.trim() || !scanType) {
-      toast.error('Veuillez remplir tous les champs', {
-        duration: 3000,
-        icon: '⚠️',
-      });
       return;
     }
 
@@ -66,25 +62,8 @@ export default function ManualEntry() {
       setIsProcessing(false);
 
       if (result.status === 'success') {
-        toast.success(result.message, {
-          duration: 4000,
-          icon: '✅',
-          style: {
-            background: '#10b981',
-            color: 'white',
-          },
-        });
         setTicketId('');
         setScanType('');
-      } else {
-        toast.error(result.message, {
-          duration: 4000,
-          icon: '❌',
-          style: {
-            background: '#ef4444',
-            color: 'white',
-          },
-        });
       }
     } catch (error) {
       console.error('Erreur lors de la validation:', error);
@@ -96,14 +75,7 @@ export default function ManualEntry() {
       };
       setLastResult(result);
       setIsProcessing(false);
-      toast.error('Erreur de connexion au serveur', {
-        duration: 4000,
-        icon: '❌',
-        style: {
-          background: '#ef4444',
-          color: 'white',
-        },
-      });
+      // Erreur de connexion au serveur
     }
   };
 

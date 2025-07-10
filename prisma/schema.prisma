@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
   output   = "../lib/generated/prisma"
@@ -18,9 +12,9 @@ model User {
   id        String   @id @default(cuid())
   email     String   @unique
   password  String
+  createdAt DateTime @default(now())
   name      String
   role      UserRole @default(ENTRY)
-  createdAt DateTime @default(now())
 }
 
 model Ticket {
@@ -28,6 +22,7 @@ model Ticket {
   number      String        @unique
   status      Status        @default(PENDING)
   scannedAt   DateTime?
+  soldAt      DateTime?
   entryType   EntryType?
   createdAt   DateTime      @default(now())
   scanHistory ScanHistory[]
@@ -35,10 +30,10 @@ model Ticket {
 
 model ScanHistory {
   id        String   @id @default(cuid())
-  ticket    Ticket   @relation(fields: [ticketId], references: [id])
   ticketId  String
   action    Action
   scannedAt DateTime @default(now())
+  ticket    Ticket   @relation(fields: [ticketId], references: [id])
 }
 
 enum Status {
