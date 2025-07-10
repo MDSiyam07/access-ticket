@@ -31,44 +31,7 @@ export const useAuth = () => {
   return context;
 };
 
-// Configuration des utilisateurs spécialisés (en production, cela devrait être dans une base de données)
-const USERS = {
-  'admin@festival.com': {
-    id: '1',
-    email: 'admin@festival.com',
-    name: 'Administrateur Festival',
-    role: 'admin' as const,
-    password: 'admin123' // En production, utiliser des hash bcrypt
-  },
-  'entry@festival.com': {
-    id: '2',
-    email: 'entry@festival.com',
-    name: 'Contrôleur Entrées',
-    role: 'entry' as const,
-    password: 'entry123'
-  },
-  'exit@festival.com': {
-    id: '3',
-    email: 'exit@festival.com',
-    name: 'Contrôleur Sorties',
-    role: 'exit' as const,
-    password: 'exit123'
-  },
-  'reentry@festival.com': {
-    id: '4',
-    email: 'reentry@festival.com',
-    name: 'Contrôleur Ré-entrées',
-    role: 'reentry' as const,
-    password: 'reentry123'
-  },
-  'vendeur@festival.com': {
-    id: '5',
-    email: 'vendeur@festival.com',
-    name: 'Vendeur de Tickets',
-    role: 'vendeur' as const,
-    password: 'vendeur123'
-  }
-};
+// Les utilisateurs sont maintenant gérés par la base de données
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
@@ -86,16 +49,58 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (savedUser) {
           const parsedUser = JSON.parse(savedUser);
           console.log('[AuthContext] Parsed user:', parsedUser);
-          // Vérifier que l'utilisateur existe toujours dans la configuration
-          if (USERS[parsedUser.email as keyof typeof USERS]) {
-            setUser(parsedUser);
-            setIsAuthenticated(true);
-            console.log('[AuthContext] User authenticated');
-          } else {
-            // Utilisateur supprimé de la configuration, déconnecter
-            localStorage.removeItem('festival-user');
-            console.log('[AuthContext] User not found in config, removed from localStorage');
-          }
+          
+          // Vérifier que l'utilisateur existe toujours dans la base de données
+          const verifyUser = async () => {
+            try {
+              const response = await fetch('/api/auth/verify', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ userId: parsedUser.id }),
+              });
+
+              if (response.ok) {
+                const data = await response.json();
+                if (data.success) {
+                  // Mettre à jour l'utilisateur avec les données fraîches de la DB
+                  const roleMapping: Record<string, 'admin' | 'entry' | 'exit' | 'reentry' | 'vendeur'> = {
+                    'ADMIN': 'admin',
+                    'ENTRY': 'entry',
+                    'EXIT': 'exit',
+                    'REENTRY': 'reentry',
+                    'VENDEUR': 'vendeur',
+                  };
+
+                  const updatedUser = {
+                    id: data.user.id,
+                    email: data.user.email,
+                    name: data.user.name,
+                    role: roleMapping[data.user.role] || 'entry'
+                  };
+                  
+                  setUser(updatedUser);
+                  setIsAuthenticated(true);
+                  localStorage.setItem('festival-user', JSON.stringify(updatedUser));
+                  console.log('[AuthContext] User authenticated from DB');
+                } else {
+                  // Utilisateur supprimé de la DB, déconnecter
+                  localStorage.removeItem('festival-user');
+                  console.log('[AuthContext] User not found in DB, removed from localStorage');
+                }
+              } else {
+                // Erreur API, déconnecter
+                localStorage.removeItem('festival-user');
+                console.log('[AuthContext] API error, removed from localStorage');
+              }
+            } catch (error) {
+              console.error('[AuthContext] Error verifying user:', error);
+              localStorage.removeItem('festival-user');
+            }
+          };
+
+          verifyUser();
         } else {
           console.log('[AuthContext] No user in localStorage');
         }
@@ -120,17 +125,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       setIsLoading(true);
       
-      // Simulate API call with delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      const userConfig = USERS[email as keyof typeof USERS];
-      
-      if (userConfig && userConfig.password === password) {
+      // Appel de l'API d'authentification réelle
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        // Convertir le rôle de la base de données vers le format de l'interface
+        const roleMapping: Record<string, 'admin' | 'entry' | 'exit' | 'reentry' | 'vendeur'> = {
+          'ADMIN': 'admin',
+          'ENTRY': 'entry',
+          'EXIT': 'exit',
+          'REENTRY': 'reentry',
+          'VENDEUR': 'vendeur',
+        };
+
         const newUser = {
-          id: userConfig.id,
-          email: userConfig.email,
-          name: userConfig.name,
-          role: userConfig.role
+          id: data.user.id,
+          email: data.user.email,
+          name: data.user.name,
+          role: roleMapping[data.user.role] || 'entry'
         };
         
         setUser(newUser);
@@ -141,7 +161,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           localStorage.setItem('festival-user', JSON.stringify(newUser));
         }
         
-        return { success: true, role: userConfig.role };
+        return { success: true, role: newUser.role };
       }
       
       return { success: false };

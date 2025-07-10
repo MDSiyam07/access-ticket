@@ -1,20 +1,43 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 
 import { useAuth } from '@/app/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { ScanLine, Eye, EyeOff, Shield, LogIn, LogOut, RefreshCw } from 'lucide-react';
+import { ScanLine, Eye, EyeOff, Shield } from 'lucide-react';
 // import toast from 'react-hot-toast';
 
 export default function Login() {
-  const { login } = useAuth();
+  const { login, user } = useAuth();
+  const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+
+  // Redirection automatique si déjà connecté
+  useEffect(() => {
+    console.log('[Login] useEffect - user:', user);
+    if (user) {
+      let redirectPath = '/dashboard';
+      if (user.role === 'admin') {
+        redirectPath = '/admin';
+      } else if (user.role === 'entry') {
+        redirectPath = '/scan-entry';
+      } else if (user.role === 'exit') {
+        redirectPath = '/scan-exit';
+      } else if (user.role === 'reentry') {
+        redirectPath = '/scan-entry';
+      } else if (user.role === 'vendeur') {
+        redirectPath = '/scan-selling';
+      }
+      console.log('[Login] Redirecting to:', redirectPath);
+      router.push(redirectPath);
+    }
+  }, [user, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -23,53 +46,20 @@ export default function Login() {
     try {
       const result = await login(email, password);
       if (result.success) {
-        // Déterminer la page de redirection selon le rôle
-        let redirectPath = '/dashboard';
-        if (result.role === 'admin') {
-          redirectPath = '/admin';
-        } else if (result.role === 'entry') {
-          redirectPath = '/scan-entry';
-        } else if (result.role === 'exit') {
-          redirectPath = '/scan-exit';
-        } else if (result.role === 'reentry') {
-          redirectPath = '/scan-entry'; // Pour les ré-entrées, on utilise la page d'entrée avec titre adapté
-        } else if (result.role === 'vendeur') {
-          redirectPath = '/scan-selling';
-        }
-        
-        // Connexion réussie
-        
-        // Forcer la redirection immédiatement
-        window.location.href = redirectPath;
+        // La redirection sera gérée par le useEffect quand l'utilisateur sera mis à jour
+        console.log('Connexion réussie, redirection en cours...');
       } else {
         // Email ou mot de passe incorrect
+        console.log('Échec de connexion');
       }
     } catch (error) {
-      console.error(error);
-      // Une erreur est survenue lors de la connexion
+      console.error('Erreur lors de la connexion:', error);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const fillCredentials = (type: 'admin' | 'entry' | 'exit' | 'reentry' | 'vendeur') => {
-    if (type === 'admin') {
-      setEmail('admin@festival.com');
-      setPassword('admin123');
-    } else if (type === 'entry') {
-      setEmail('entry@festival.com');
-      setPassword('entry123');
-    } else if (type === 'exit') {
-      setEmail('exit@festival.com');
-      setPassword('exit123');
-    } else if (type === 'reentry') {
-      setEmail('reentry@festival.com');
-      setPassword('reentry123');
-    } else if (type === 'vendeur') {
-      setEmail('vendeur@festival.com');
-      setPassword('vendeur123');
-    }
-  };
+  // Les comptes tests ont été supprimés - les utilisateurs sont maintenant gérés via la page admin
 
   return (
     <div className="min-h-screen flex bg-gradient-to-br from-modern-violet-50 via-modern-cyan-50 to-modern-violet-100">
@@ -172,128 +162,19 @@ export default function Login() {
             </form>
           </div>
 
-          {/* Comptes spécialisés */}
-          <div className="mt-8 space-y-4">
-            <h3 className="text-lg font-semibold text-foreground mb-4">Comptes spécialisés :</h3>
-            
-            {/* Compte Admin */}
+          {/* Information sur la gestion des utilisateurs */}
+          <div className="mt-8">
             <div className="glass-card p-6 border-l-4 border-l-modern-violet-500">
               <div className="flex items-center mb-3">
                 <Shield className="w-5 h-5 text-modern-violet-600 mr-2" />
-                <span className="font-medium text-modern-violet-800">Administrateur</span>
+                <span className="font-medium text-modern-violet-800">Gestion des utilisateurs</span>
               </div>
               <p className="text-sm text-muted-foreground mb-3">
-                Accès complet : import, statistiques, historique, administration
+                Les utilisateurs sont gérés par l&apos;administrateur via la page d&apos;administration.
               </p>
-              <div className="space-y-1 text-sm text-modern-violet-600">
-                <p>Email: admin@festival.com</p>
-                <p>Mot de passe: admin123</p>
-              </div>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => fillCredentials('admin')}
-                className="mt-3 w-full border-modern-violet-300 text-modern-violet-700 hover:bg-modern-violet-50 rounded-2xl"
-              >
-                Utiliser ce compte
-              </Button>
-            </div>
-
-            {/* Compte Entrées */}
-            <div className="glass-card p-6 border-l-4 border-l-modern-cyan-500">
-              <div className="flex items-center mb-3">
-                <LogIn className="w-5 h-5 text-modern-cyan-600 mr-2" />
-                <span className="font-medium text-modern-cyan-800">Contrôleur Entrées</span>
-              </div>
-              <p className="text-sm text-muted-foreground mb-3">
-                Accès : scan d&apos;entrée uniquement
+              <p className="text-sm text-modern-violet-600">
+                Contactez votre administrateur pour obtenir vos identifiants de connexion.
               </p>
-              <div className="space-y-1 text-sm text-modern-cyan-600">
-                <p>Email: entry@festival.com</p>
-                <p>Mot de passe: entry123</p>
-              </div>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => fillCredentials('entry')}
-                className="mt-3 w-full border-modern-cyan-300 text-modern-cyan-700 hover:bg-modern-cyan-50 rounded-2xl"
-              >
-                Utiliser ce compte
-              </Button>
-            </div>
-
-            {/* Compte Sorties */}
-            <div className="glass-card p-6 border-l-4 border-l-modern-gold-500">
-              <div className="flex items-center mb-3">
-                <LogOut className="w-5 h-5 text-modern-gold-600 mr-2" />
-                <span className="font-medium text-modern-gold-800">Contrôleur Sorties</span>
-              </div>
-              <p className="text-sm text-muted-foreground mb-3">
-                Accès : scan de sortie uniquement
-              </p>
-              <div className="space-y-1 text-sm text-modern-gold-600">
-                <p>Email: exit@festival.com</p>
-                <p>Mot de passe: exit123</p>
-              </div>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => fillCredentials('exit')}
-                className="mt-3 w-full border-modern-gold-300 text-modern-gold-700 hover:bg-modern-gold-50 rounded-2xl"
-              >
-                Utiliser ce compte
-              </Button>
-            </div>
-
-            {/* Compte Ré-entrées */}
-            <div className="glass-card p-6 border-l-4 border-l-modern-green-500">
-              <div className="flex items-center mb-3">
-                <RefreshCw className="w-5 h-5 text-modern-green-600 mr-2" />
-                <span className="font-medium text-modern-green-800">Contrôleur Ré-entrées</span>
-              </div>
-              <p className="text-sm text-muted-foreground mb-3">
-                Accès : gestion des ré-entrées (sorties et ré-entrées)
-              </p>
-              <div className="space-y-1 text-sm text-modern-green-600">
-                <p>Email: reentry@festival.com</p>
-                <p>Mot de passe: reentry123</p>
-              </div>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => fillCredentials('reentry')}
-                className="mt-3 w-full border-modern-green-300 text-modern-green-700 hover:bg-modern-green-50 rounded-2xl"
-              >
-                Utiliser ce compte
-              </Button>
-            </div>
-
-            {/* Compte Vendeur */}
-            <div className="glass-card p-6 border-l-4 border-l-orange-500">
-              <div className="flex items-center mb-3">
-                <ScanLine className="w-5 h-5 text-orange-600 mr-2" />
-                <span className="font-medium text-orange-800">Vendeur de Tickets</span>
-              </div>
-              <p className="text-sm text-muted-foreground mb-3">
-                Accès : scan de vente et statistiques
-              </p>
-              <div className="space-y-1 text-sm text-orange-600">
-                <p>Email: vendeur@festival.com</p>
-                <p>Mot de passe: vendeur123</p>
-              </div>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => fillCredentials('vendeur')}
-                className="mt-3 w-full border-orange-300 text-orange-700 hover:bg-orange-50 rounded-2xl"
-              >
-                Utiliser ce compte
-              </Button>
             </div>
           </div>
         </div>

@@ -13,6 +13,7 @@ import EntryRoute from '@/components/EntryRoute';
 import { cn } from '@/lib/utils';
 import { offlineStorage } from '@/lib/offlineStorage';
 import { useAuth } from '@/app/contexts/AuthContext';
+import { useRouter } from 'next/navigation';
 
 type ScanResult = 'success' | 'already-used' | 'invalid' | null;
 
@@ -31,7 +32,24 @@ export default function ScanEntry() {
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const processingRef = useRef(false);
 
-  const { user } = useAuth();
+  const { user, isLoading: authLoading } = useAuth();
+  const router = useRouter();
+
+  // Vérification d'authentification
+  useEffect(() => {
+    console.log('[ScanEntry] Auth check - user:', user, 'authLoading:', authLoading);
+    if (!authLoading && !user) {
+      console.log('[ScanEntry] No user, redirecting to login');
+      router.push('/login');
+      return;
+    }
+    
+    // Vérifier que l'utilisateur a le bon rôle pour cette page
+    if (user && !['entry', 'reentry'].includes(user.role)) {
+      console.log('[ScanEntry] User role not allowed:', user.role);
+      router.push('/login');
+    }
+  }, [user, authLoading, router]);
 
   // Déterminer le titre selon le rôle
   const isReentryUser = user?.role === 'reentry';
