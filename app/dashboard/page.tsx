@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Users, UserCheck, UserX, Clock, TrendingUp, Shield, User } from 'lucide-react';
+import { Users, UserCheck, UserX, Clock, TrendingUp, Shield, User, ShoppingCart } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
 interface Stats {
@@ -11,6 +11,7 @@ interface Stats {
   scannedOut: number;
   currentlyInside: number;
   pending: number;
+  vendus: number;
 }
 
 interface Activity {
@@ -28,7 +29,8 @@ export default function Dashboard() {
     scannedIn: 0,
     scannedOut: 0,
     currentlyInside: 0,
-    pending: 0
+    pending: 0,
+    vendus: 0
   });
   const [activity, setActivity] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(true);
@@ -57,7 +59,8 @@ export default function Dashboard() {
           scannedIn: statsData.entered,
           scannedOut: statsData.exited,
           currentlyInside: statsData.entered - statsData.exited,
-          pending: statsData.pending
+          pending: statsData.pending,
+          vendus: statsData.vendus
         });
       }
 
@@ -120,8 +123,8 @@ export default function Dashboard() {
             Chargement des données...
           </p>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {[...Array(4)].map((_, i) => (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-6">
+          {[...Array(6)].map((_, i) => (
             <Card key={i} className="glass-card">
               <CardContent className="p-6">
                 <div className="animate-pulse">
@@ -165,7 +168,7 @@ export default function Dashboard() {
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-6">
         <StatCard
           title="Total Tickets"
           value={stats.totalTickets}
@@ -200,6 +203,13 @@ export default function Dashboard() {
           icon={TrendingUp}
           description="Différence entrées - sorties"
           color="violet"
+        />
+        <StatCard
+          title="Tickets Vendus"
+          value={stats.vendus}
+          icon={ShoppingCart}
+          description="Billets émis"
+          color="gold"
         />
       </div>
 

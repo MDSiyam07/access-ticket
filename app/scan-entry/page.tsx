@@ -33,6 +33,13 @@ export default function ScanEntry() {
 
   const { user } = useAuth();
 
+  // Déterminer le titre selon le rôle
+  const isReentryUser = user?.role === 'reentry';
+  const pageTitle = isReentryUser ? 'Scan de Ré-entrée' : 'Scan d\'Entrée';
+  const pageDescription = isReentryUser 
+    ? 'Scannez les billets pour valider la ré-entrée à l\'événement'
+    : 'Scannez les billets pour valider l\'accès à l\'événement';
+
   // Ensure we're on the client side
   useEffect(() => {
     console.log("Standalone mode:", window.matchMedia('(display-mode: standalone)').matches);
@@ -224,7 +231,7 @@ export default function ScanEntry() {
       <div className="max-w-2xl mx-auto space-y-6">
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold gradient-text mb-2">
-            Scan d&apos;Entrée
+            {pageTitle}
           </h1>
           <LoadingSpinner size="lg" text="Initialisation..." />
         </div>
@@ -238,10 +245,10 @@ export default function ScanEntry() {
         {/* Header */}
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold gradient-text mb-2">
-            Scan d&apos;Entrée
+            {pageTitle}
           </h1>
           <p className="text-muted-foreground text-lg">
-            Scannez les billets pour valider l&apos;accès à l&apos;événement
+            {pageDescription}
           </p>
         </div>
 

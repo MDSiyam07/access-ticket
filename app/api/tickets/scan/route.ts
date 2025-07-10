@@ -83,7 +83,36 @@ export async function POST(request: NextRequest) {
         });
       }
 
-      // Première entrée
+      // Si le ticket est vendu, permettre l'entrée
+      if (ticket.status === 'VENDU') {
+        await prisma.$transaction([
+          prisma.ticket.update({
+            where: { id: ticket.id },
+            data: {
+              status: 'ENTERED',
+              scannedAt: new Date(),
+              entryType: entryType as 'SCAN' | 'MANUAL',
+            },
+          }),
+          prisma.scanHistory.create({
+            data: {
+              ticketId: ticket.id,
+              action: 'ENTER',
+            },
+          }),
+        ]);
+
+        return NextResponse.json({
+          success: true,
+          message: 'Ticket vendu validé pour entrée.',
+          ticket: {
+            number: ticket.number,
+            status: 'ENTERED',
+          },
+        });
+      }
+
+      // Première entrée (ticket PENDING)
       await prisma.$transaction([
         prisma.ticket.update({
           where: { id: ticket.id },
@@ -126,7 +155,14 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      // Valider la sortie
+      if (ticket.status === 'VENDU') {
+        return NextResponse.json(
+          { error: 'Ce ticket vendu n\'a pas encore été validé pour entrée.' },
+          { status: 400 }
+        );
+      }
+
+      // Valider la sortie (pour les tickets ENTERED)
       await prisma.$transaction([
         prisma.ticket.update({
           where: { id: ticket.id },

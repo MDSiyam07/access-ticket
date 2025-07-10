@@ -6,7 +6,7 @@ interface User {
   id: string;
   email: string;
   name: string;
-  role: 'admin' | 'entry' | 'exit' | 'reentry';
+  role: 'admin' | 'entry' | 'exit' | 'reentry' | 'vendeur';
 }
 
 interface AuthContextType {
@@ -17,7 +17,7 @@ interface AuthContextType {
   isEntryUser: boolean;
   isExitUser: boolean;
   isReentryUser: boolean;
-  login: (email: string, password: string) => Promise<{ success: boolean; role?: 'admin' | 'entry' | 'exit' | 'reentry' }>;
+  login: (email: string, password: string) => Promise<{ success: boolean; role?: 'admin' | 'entry' | 'exit' | 'reentry' | 'vendeur' }>;
   logout: () => void;
 }
 
@@ -60,6 +60,13 @@ const USERS = {
     name: 'Contrôleur Ré-entrées',
     role: 'reentry' as const,
     password: 'reentry123'
+  },
+  'vendeur@festival.com': {
+    id: '5',
+    email: 'vendeur@festival.com',
+    name: 'Vendeur de Tickets',
+    role: 'vendeur' as const,
+    password: 'vendeur123'
   }
 };
 
@@ -109,7 +116,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     console.log('[AuthContext] isLoading changed:', isLoading);
   }, [isLoading]);
 
-  const login = async (email: string, password: string): Promise<{ success: boolean; role?: 'admin' | 'entry' | 'exit' | 'reentry' }> => {
+  const login = async (email: string, password: string): Promise<{ success: boolean; role?: 'admin' | 'entry' | 'exit' | 'reentry' | 'vendeur' }> => {
     try {
       setIsLoading(true);
       

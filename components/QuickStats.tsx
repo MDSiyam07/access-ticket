@@ -13,6 +13,7 @@ interface Stats {
   entered: number;
   exited: number;
   pending: number;
+  vendus?: number;
 }
 
 export default function QuickStats({ type, refreshTrigger }: QuickStatsProps) {
@@ -20,7 +21,8 @@ export default function QuickStats({ type, refreshTrigger }: QuickStatsProps) {
     total: 0,
     entered: 0,
     exited: 0,
-    pending: 0
+    pending: 0,
+    vendus: 0
   });
 
   const fetchStats = useCallback(async () => {
@@ -66,6 +68,14 @@ export default function QuickStats({ type, refreshTrigger }: QuickStatsProps) {
             <div className="text-sm text-gray-500">Billets en attente</div>
           </CardContent>
         </Card>
+        {stats.vendus !== undefined && (
+          <Card className="festival-card col-span-2">
+            <CardContent className="p-4 text-center">
+              <div className="text-2xl font-bold text-orange-600">{stats.vendus}</div>
+              <div className="text-sm text-gray-500">Tickets vendus</div>
+            </CardContent>
+          </Card>
+        )}
       </div>
     );
   }

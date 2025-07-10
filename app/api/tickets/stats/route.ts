@@ -6,11 +6,12 @@ const prisma = new PrismaClient();
 export async function GET() {
   try {
     // Compter les tickets par statut
-    const [total, pending, entered, exited] = await Promise.all([
+    const [total, pending, entered, exited, vendus] = await Promise.all([
       prisma.ticket.count(),
       prisma.ticket.count({ where: { status: 'PENDING' } }),
       prisma.ticket.count({ where: { status: 'ENTERED' } }),
       prisma.ticket.count({ where: { status: 'EXITED' } }),
+      prisma.ticket.count({ where: { status: 'VENDU' } }),
     ]);
 
     return NextResponse.json({
@@ -18,6 +19,7 @@ export async function GET() {
       pending,
       entered,
       exited,
+      vendus,
       imported: total, // Pour compatibilité avec l'interface
       duplicates: 0, // Cette valeur n'est pas disponible dans les stats générales
     });

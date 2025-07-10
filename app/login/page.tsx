@@ -32,7 +32,9 @@ export default function Login() {
         } else if (result.role === 'exit') {
           redirectPath = '/scan-exit';
         } else if (result.role === 'reentry') {
-          redirectPath = '/scan-exit'; // Pour les ré-entrées, on utilise la page de sortie
+          redirectPath = '/scan-entry'; // Pour les ré-entrées, on utilise la page d'entrée avec titre adapté
+        } else if (result.role === 'vendeur') {
+          redirectPath = '/scan-selling';
         }
         
         toast.success("Connexion réussie - Bienvenue dans le système de contrôle d'accès !");
@@ -50,7 +52,7 @@ export default function Login() {
     }
   };
 
-  const fillCredentials = (type: 'admin' | 'entry' | 'exit' | 'reentry') => {
+  const fillCredentials = (type: 'admin' | 'entry' | 'exit' | 'reentry' | 'vendeur') => {
     if (type === 'admin') {
       setEmail('admin@festival.com');
       setPassword('admin123');
@@ -63,6 +65,9 @@ export default function Login() {
     } else if (type === 'reentry') {
       setEmail('reentry@festival.com');
       setPassword('reentry123');
+    } else if (type === 'vendeur') {
+      setEmail('vendeur@festival.com');
+      setPassword('vendeur123');
     }
   };
 
@@ -262,6 +267,30 @@ export default function Login() {
                 size="sm"
                 onClick={() => fillCredentials('reentry')}
                 className="mt-3 w-full border-modern-green-300 text-modern-green-700 hover:bg-modern-green-50 rounded-2xl"
+              >
+                Utiliser ce compte
+              </Button>
+            </div>
+
+            {/* Compte Vendeur */}
+            <div className="glass-card p-6 border-l-4 border-l-orange-500">
+              <div className="flex items-center mb-3">
+                <ScanLine className="w-5 h-5 text-orange-600 mr-2" />
+                <span className="font-medium text-orange-800">Vendeur de Tickets</span>
+              </div>
+              <p className="text-sm text-muted-foreground mb-3">
+                Accès : scan de vente et statistiques
+              </p>
+              <div className="space-y-1 text-sm text-orange-600">
+                <p>Email: vendeur@festival.com</p>
+                <p>Mot de passe: vendeur123</p>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => fillCredentials('vendeur')}
+                className="mt-3 w-full border-orange-300 text-orange-700 hover:bg-orange-50 rounded-2xl"
               >
                 Utiliser ce compte
               </Button>

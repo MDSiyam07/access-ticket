@@ -30,6 +30,9 @@ export default function Navbar({ children }: NavbarProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [redirecting, setRedirecting] = useState(false);
 
+  // Calculer si l'utilisateur est vendeur
+  const isVendeurUser = user?.role === 'vendeur';
+
   // Redirect to login if not authenticated (except for login page)
   useEffect(() => {
     // Éviter les redirections multiples
@@ -84,9 +87,16 @@ export default function Navbar({ children }: NavbarProps) {
         { name: 'Statistiques', href: '/dashboard', icon: BarChart3 },
         { name: 'Scan Entrée', href: '/scan-entry', icon: LogIn },
         { name: 'Scan Sortie', href: '/scan-exit', icon: LogOut },
+        { name: 'Scan Vente', href: '/scan-selling', icon: ScanLine },
         { name: 'Historique', href: '/history', icon: History },
         { name: 'Saisie Manuelle', href: '/manual-entry', icon: Edit3 },
         { name: 'Import de fichiers', href: '/admin', icon: Settings },
+      ];
+    } else if (isVendeurUser) {
+      return [
+        { name: 'Statistiques', href: '/dashboard', icon: BarChart3 },
+        { name: 'Scan Vente', href: '/scan-selling', icon: ScanLine },
+        { name: 'Saisie Manuelle', href: '/manual-selling', icon: Edit3 },
       ];
     } else if (isEntryUser) {
       return [
@@ -103,7 +113,7 @@ export default function Navbar({ children }: NavbarProps) {
     } else if (isReentryUser) {
       return [
         { name: 'Statistiques', href: '/dashboard', icon: BarChart3 },
-        { name: 'Scan Entrée', href: '/scan-entry', icon: LogIn },
+        { name: 'Scan Re-Entrée', href: '/scan-entry', icon: LogIn },
         { name: 'Saisie Manuelle', href: '/manual-entry', icon: Edit3 },
       ];
     }
@@ -135,6 +145,7 @@ export default function Navbar({ children }: NavbarProps) {
 
   const getUserRoleDisplay = () => {
     if (isAdmin) return 'Administrateur';
+    if (isVendeurUser) return 'Vendeur';
     if (isEntryUser) return 'Contrôleur Entrées';
     if (isExitUser) return 'Contrôleur Sorties';
     if (isReentryUser) return 'Contrôleur Ré-entrées';
@@ -143,6 +154,7 @@ export default function Navbar({ children }: NavbarProps) {
 
   const getRoleColor = () => {
     if (isAdmin) return 'text-modern-violet-600';
+    if (isVendeurUser) return 'text-modern-orange-600';
     if (isEntryUser) return 'text-modern-cyan-600';
     if (isExitUser) return 'text-modern-gold-600';
     if (isReentryUser) return 'text-modern-green-600';
@@ -197,6 +209,12 @@ export default function Navbar({ children }: NavbarProps) {
                   <div className="ml-3 flex items-center gap-1 bg-modern-violet-100 text-modern-violet-800 px-3 py-1 rounded-2xl text-xs font-medium border border-modern-violet-200">
                     <Shield className="w-3 h-3" />
                     Admin
+                  </div>
+                )}
+                {isVendeurUser && (
+                  <div className="ml-3 flex items-center gap-1 bg-modern-orange-100 text-modern-orange-800 px-3 py-1 rounded-2xl text-xs font-medium border border-modern-orange-200">
+                    <ScanLine className="w-3 h-3" />
+                    Vendeur
                   </div>
                 )}
                 {isEntryUser && (
@@ -255,6 +273,9 @@ export default function Navbar({ children }: NavbarProps) {
                     {isAdmin && (
                       <p className="text-xs text-modern-violet-600 font-medium">Administrateur</p>
                     )}
+                    {isVendeurUser && (
+                      <p className="text-xs text-modern-orange-600 font-medium">Vendeur</p>
+                    )}
                     {isEntryUser && (
                       <p className="text-xs text-modern-cyan-600 font-medium">Contrôleur Entrées</p>
                     )}
@@ -296,6 +317,12 @@ export default function Navbar({ children }: NavbarProps) {
                   <div className="ml-3 flex items-center gap-1 bg-purple-700/80 text-white px-3 py-1 rounded-2xl text-sm font-medium border border-purple-400 max-w-[110px] overflow-hidden text-ellipsis">
                     <Shield className="w-4 h-4" />
                     Admin
+                  </div>
+                )}
+                {isVendeurUser && (
+                  <div className="ml-3 flex items-center gap-1 bg-orange-700/80 text-white px-3 py-1 rounded-2xl text-sm font-medium border border-orange-400 max-w-[110px] overflow-hidden text-ellipsis">
+                    <ScanLine className="w-4 h-4" />
+                    Vendeur
                   </div>
                 )}
                 {isEntryUser && (

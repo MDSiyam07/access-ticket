@@ -46,6 +46,7 @@ enum Status {
   ENTERED
   EXITED
   MANUAL
+  VENDU
 }
 
 enum EntryType {
@@ -63,4 +64,5 @@ enum UserRole {
   ENTRY
   EXIT
   REENTRY
+  VENDEUR
 }
