@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
-import { Users, CheckCircle, XCircle, Clock } from 'lucide-react';
+import { Users, CheckCircle, XCircle, Clock, ShoppingCart } from 'lucide-react';
 
 interface ImportStats {
   total: number;
@@ -11,6 +11,7 @@ interface ImportStats {
   pending: number;
   entered: number;
   exited: number;
+  vendus: number;
 }
 
 export default function ImportStats() {
@@ -37,8 +38,8 @@ export default function ImportStats() {
 
   if (loading) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {[...Array(4)].map((_, i) => (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+        {[...Array(5)].map((_, i) => (
           <Card key={i}>
             <CardContent className="p-6">
               <div className="animate-pulse">
@@ -61,7 +62,7 @@ export default function ImportStats() {
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">Total Tickets</CardTitle>
@@ -81,9 +82,22 @@ export default function ImportStats() {
           <Clock className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-                          <div className="text-2xl font-bold text-gray-600">{stats.pending}</div>
+          <div className="text-2xl font-bold text-gray-600">{stats.pending}</div>
           <p className="text-xs text-muted-foreground">
             Tickets non utilisés
+          </p>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium">Vendus</CardTitle>
+          <ShoppingCart className="h-4 w-4 text-muted-foreground" />
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold text-orange-600">{stats.vendus}</div>
+          <p className="text-xs text-muted-foreground">
+            Tickets vendus
           </p>
         </CardContent>
       </Card>

@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Users, UserCheck, UserX, Clock, TrendingUp, Shield, User, ShoppingCart } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import Link from 'next/link';
 
 interface Stats {
   totalTickets: number;
@@ -278,7 +279,7 @@ export default function Dashboard() {
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                <button className="w-full text-left p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors">
+                <Link href="/admin" className="w-full block text-left p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors">
                   <div className="flex items-center">
                     <Users className="w-5 h-5 mr-3 text-blue-600" />
                     <div>
@@ -286,8 +287,8 @@ export default function Dashboard() {
                       <p className="text-sm text-gray-500">Import et gestion des billets</p>
                     </div>
                   </div>
-                </button>
-                <button className="w-full text-left p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors">
+                </Link>
+                <Link href="/history" className="w-full block text-left p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors">
                   <div className="flex items-center">
                     <Clock className="w-5 h-5 mr-3 text-green-600" />
                     <div>
@@ -295,8 +296,8 @@ export default function Dashboard() {
                       <p className="text-sm text-gray-500">Toutes les activités passées</p>
                     </div>
                   </div>
-                </button>
-                <button className="w-full text-left p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors">
+                </Link>
+                <Link href="/admin" className="w-full block text-left p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors">
                   <div className="flex items-center">
                     <Shield className="w-5 h-5 mr-3 text-red-600" />
                     <div>
@@ -304,7 +305,7 @@ export default function Dashboard() {
                       <p className="text-sm text-gray-500">Paramètres avancés</p>
                     </div>
                   </div>
-                </button>
+                </Link>
               </div>
             </CardContent>
           </Card>

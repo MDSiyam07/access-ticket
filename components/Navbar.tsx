@@ -308,37 +308,37 @@ export default function Navbar({ children }: NavbarProps) {
           <div className="flex flex-col w-full">
             <div className="flex flex-col flex-grow bg-white border-r border-gray-200">
               {/* Logo */}
-              <div className="flex items-center px-6 py-4 border-b border-border/50">
+              <div className="flex items-center px-8 py-4 border-b border-border/50 min-h-[64px]">
                 <div className="bg-black/40 rounded-2xl w-10 h-10 flex items-center justify-center">
                   <ScanLine className="w-6 h-6 text-white" />
                 </div>
-                <span className="ml-3 text-lg font-semibold text-white">AccessTicket</span>
+                <span className="ml-3 text-lg font-semibold text-gray-900 whitespace-nowrap">AccessTicket</span>
                 {isAdmin && (
-                  <div className="ml-3 flex items-center gap-1 bg-purple-700/80 text-white px-3 py-1 rounded-2xl text-sm font-medium border border-purple-400 max-w-[110px] overflow-hidden text-ellipsis">
+                  <div className="ml-3 flex items-center gap-1 bg-purple-700/80 text-white px-3 py-1 rounded-2xl text-sm font-medium border border-purple-400">
                     <Shield className="w-4 h-4" />
                     Admin
                   </div>
                 )}
                 {isVendeurUser && (
-                  <div className="ml-3 flex items-center gap-1 bg-orange-700/80 text-white px-3 py-1 rounded-2xl text-sm font-medium border border-orange-400 max-w-[110px] overflow-hidden text-ellipsis">
+                  <div className="ml-3 flex items-center gap-1 bg-orange-700/80 text-white px-3 py-1 rounded-2xl text-sm font-medium border border-orange-400">
                     <ScanLine className="w-4 h-4" />
                     Vendeur
                   </div>
                 )}
                 {isEntryUser && (
-                  <div className="ml-3 flex items-center gap-1 bg-cyan-700/80 text-white px-3 py-1 rounded-2xl text-sm font-medium border border-cyan-400 max-w-[110px] overflow-hidden text-ellipsis">
+                  <div className="ml-3 flex items-center gap-1 bg-cyan-700/80 text-white px-3 py-1 rounded-2xl text-sm font-medium border border-cyan-400">
                     <LogIn className="w-4 h-4" />
                     Entrée
                   </div>
                 )}
                 {isExitUser && (
-                  <div className="ml-3 flex items-center gap-1 bg-yellow-700/80 text-white px-3 py-1 rounded-2xl text-sm font-medium border border-yellow-400 max-w-[110px] overflow-hidden text-ellipsis">
+                  <div className="ml-3 flex items-center gap-1 bg-yellow-700/80 text-white px-3 py-1 rounded-2xl text-sm font-medium border border-yellow-400">
                     <LogOut className="w-4 h-4" />
                     Sortie
                   </div>
                 )}
                 {isReentryUser && (
-                  <div className="ml-3 flex items-center gap-1 bg-green-700/80 text-white px-3 py-1 rounded-2xl text-sm font-medium border border-green-400 max-w-[110px] overflow-hidden text-ellipsis">
+                  <div className="ml-3 flex items-center gap-1 bg-green-700/80 text-white px-3 py-1 rounded-2xl text-sm font-medium border border-green-400">
                     <LogIn className="w-4 h-4" />
                     Ré-entrée
                   </div>
