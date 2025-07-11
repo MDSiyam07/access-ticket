@@ -5,7 +5,7 @@ const prisma = new PrismaClient();
 
 export async function POST(request: NextRequest) {
   try {
-    const { ticketNumber } = await request.json();
+    const { ticketNumber, vendeurId } = await request.json();
 
     if (!ticketNumber) {
       return NextResponse.json(
@@ -43,12 +43,13 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Créer une entrée dans l'historique
+    // Créer une entrée dans l'historique avec le vendeur
     await prisma.scanHistory.create({
       data: {
         ticketId: ticket.id,
         eventId: ticket.eventId,
-        action: 'SOLD', // Action de vente
+        action: 'SOLD',
+        vendeurId: vendeurId || null, // Enregistrer le vendeur si fourni
       },
     });
 

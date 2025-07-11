@@ -25,6 +25,7 @@ export default function EventManagementPage() {
   const { eventId } = useParams();
 
   useEffect(() => {
+    // Ne rediriger que si on a fini de charger ET qu'on n'est pas authentifié
     if (!isLoading && !isAuthenticated) {
       router.push('/login');
     }

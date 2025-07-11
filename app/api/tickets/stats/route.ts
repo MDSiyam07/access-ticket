@@ -15,36 +15,136 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Vérifier que l'événement existe
-    const event = await prisma.event.findUnique({
-      where: { id: eventId },
+    // Statistiques globales
+    const total = await prisma.ticket.count({
+      where: { eventId: eventId },
     });
 
-    if (!event) {
-      return NextResponse.json(
-        { error: 'Événement non trouvé.' },
-        { status: 404 }
-      );
-    }
+    const entered = await prisma.ticket.count({
+      where: { 
+        eventId: eventId,
+        status: { in: ['ENTERED', 'EXITED'] }
+      },
+    });
 
-    // Compter les tickets par statut pour cet événement
-    const [total, pending, entered, exited, vendus] = await Promise.all([
-      prisma.ticket.count({ where: { eventId } }),
-      prisma.ticket.count({ where: { status: 'PENDING', eventId } }),
-      prisma.ticket.count({ where: { status: 'ENTERED', eventId } }),
-      prisma.ticket.count({ where: { status: 'EXITED', eventId } }),
-      prisma.ticket.count({ where: { soldAt: { not: null }, eventId } }),
+    const exited = await prisma.ticket.count({
+      where: { 
+        eventId: eventId,
+        status: 'EXITED'
+      },
+    });
+
+    const pending = await prisma.ticket.count({
+      where: { 
+        eventId: eventId,
+        status: 'PENDING'
+      },
+    });
+
+    const vendus = await prisma.ticket.count({
+      where: { 
+        eventId: eventId,
+        status: 'VENDU'
+      },
+    });
+
+    // Statistiques par type de billet
+    const statsByType = await Promise.all([
+      // NORMAL
+      prisma.ticket.groupBy({
+        by: ['status'],
+        where: { 
+          eventId: eventId,
+          ticketType: 'NORMAL'
+        },
+        _count: { status: true },
+      }),
+      // VIP
+      prisma.ticket.groupBy({
+        by: ['status'],
+        where: { 
+          eventId: eventId,
+          ticketType: 'VIP'
+        },
+        _count: { status: true },
+      }),
+      // ARTISTE
+      prisma.ticket.groupBy({
+        by: ['status'],
+        where: { 
+          eventId: eventId,
+          ticketType: 'ARTISTE'
+        },
+        _count: { status: true },
+      }),
+      // STAFF
+      prisma.ticket.groupBy({
+        by: ['status'],
+        where: { 
+          eventId: eventId,
+          ticketType: 'STAFF'
+        },
+        _count: { status: true },
+      }),
     ]);
 
+    // Formater les stats par type
+    interface TypeStats {
+      status: string;
+      _count: { status: number };
+    }
+
+    const formatStatsByType = (typeStats: TypeStats[], typeName: string) => {
+      const stats = {
+        total: 0,
+        entered: 0,
+        exited: 0,
+        pending: 0,
+        vendus: 0,
+      };
+
+      typeStats.forEach(stat => {
+        const count = stat._count.status;
+        stats.total += count;
+        
+        switch (stat.status) {
+          case 'ENTERED':
+          case 'EXITED':
+            stats.entered += count;
+            break;
+          case 'EXITED':
+            stats.exited += count;
+            break;
+          case 'PENDING':
+            stats.pending += count;
+            break;
+          case 'VENDU':
+            stats.vendus += count;
+            break;
+        }
+      });
+
+      return {
+        type: typeName,
+        ...stats,
+      };
+    };
+
+    const statsByTicketType = {
+      normal: formatStatsByType(statsByType[0], 'NORMAL'),
+      vip: formatStatsByType(statsByType[1], 'VIP'),
+      artiste: formatStatsByType(statsByType[2], 'ARTISTE'),
+      staff: formatStatsByType(statsByType[3], 'STAFF'),
+    };
+
     return NextResponse.json({
+      success: true,
       total,
-      pending,
       entered,
       exited,
+      pending,
       vendus,
-      imported: total, // Pour compatibilité avec l'interface
-      duplicates: 0, // Cette valeur n'est pas disponible dans les stats générales
-      eventName: event.name,
+      byType: statsByTicketType,
     });
 
   } catch (error) {

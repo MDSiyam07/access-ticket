@@ -31,6 +31,14 @@ interface OnlineUsers {
   }>;
 }
 
+interface UserSalesStats {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  totalSales: number;
+}
+
 interface Activity {
   id: string;
   ticketNumber: string;
@@ -55,6 +63,7 @@ export default function Dashboard() {
     onlineUsers: 0,
     usersByRole: [],
   });
+  const [userSalesStats, setUserSalesStats] = useState<UserSalesStats[]>([]);
   const [activity, setActivity] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(true);
   const [showEventDropdown, setShowEventDropdown] = useState(false);
@@ -69,6 +78,7 @@ export default function Dashboard() {
     if (selectedEventId) {
       fetchStats();
       fetchOnlineUsers();
+      fetchUserSalesStats();
     }
   }, [selectedEventId]);
 
@@ -135,6 +145,20 @@ export default function Dashboard() {
       }
     } catch (error) {
       console.error('Erreur lors du chargement des utilisateurs connectés:', error);
+    }
+  };
+
+  const fetchUserSalesStats = async () => {
+    if (!selectedEventId) return;
+    
+    try {
+      const response = await fetch(`/api/users/sales-stats?eventId=${selectedEventId}`);
+      if (response.ok) {
+        const data = await response.json();
+        setUserSalesStats(data.userSalesStats || []);
+      }
+    } catch (error) {
+      console.error('Erreur lors du chargement des statistiques de ventes:', error);
     }
   };
 
@@ -435,6 +459,46 @@ export default function Dashboard() {
                     </div>
                   </div>
                 </Link>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Statistiques de ventes par utilisateur */}
+          <Card className="glass-card">
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <ShoppingCart className="w-5 h-5 mr-2 text-modern-gold-600" />
+                Ventes par utilisateur
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {userSalesStats.length > 0 ? (
+                  userSalesStats.map((user) => (
+                    <div key={user.id} className="flex items-center justify-between p-3 rounded-lg bg-gray-50">
+                      <div className="flex items-center">
+                        <div className="w-8 h-8 bg-modern-gold-500 text-white rounded-full flex items-center justify-center text-sm font-medium">
+                          {user.name.charAt(0).toUpperCase()}
+                        </div>
+                        <div className="ml-3">
+                          <p className="font-medium text-gray-900">{user.name}</p>
+                          <p className="text-sm text-gray-500">{user.email}</p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-lg font-bold text-modern-gold-600">
+                          {user.totalSales}
+                        </p>
+                        <p className="text-xs text-gray-500">ventes</p>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center py-8 text-gray-500">
+                    <ShoppingCart className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+                    <p>Aucun vendeur trouvé</p>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>

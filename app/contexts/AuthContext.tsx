@@ -37,6 +37,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [hasCheckedAuth, setHasCheckedAuth] = useState(false);
 
   useEffect(() => {
     console.log('[AuthContext] useEffect start');
@@ -87,32 +88,46 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 } else {
                   // Utilisateur supprimé de la DB, déconnecter
                   localStorage.removeItem('festival-user');
+                  setUser(null);
+                  setIsAuthenticated(false);
                   console.log('[AuthContext] User not found in DB, removed from localStorage');
                 }
               } else {
                 // Erreur API, déconnecter
                 localStorage.removeItem('festival-user');
+                setUser(null);
+                setIsAuthenticated(false);
                 console.log('[AuthContext] API error, removed from localStorage');
               }
             } catch (error) {
               console.error('[AuthContext] Error verifying user:', error);
               localStorage.removeItem('festival-user');
+              setUser(null);
+              setIsAuthenticated(false);
+            } finally {
+              setIsLoading(false);
+              setHasCheckedAuth(true);
+              console.log('[AuthContext] setIsLoading(false)');
             }
           };
 
           verifyUser();
         } else {
           console.log('[AuthContext] No user in localStorage');
+          setIsLoading(false);
+          setHasCheckedAuth(true);
         }
       } catch (error) {
         console.error('[AuthContext] Error parsing saved user:', error);
         localStorage.removeItem('festival-user');
-      } finally {
+        setUser(null);
+        setIsAuthenticated(false);
         setIsLoading(false);
-        console.log('[AuthContext] setIsLoading(false)');
+        setHasCheckedAuth(true);
       }
     } else {
       setIsLoading(false);
+      setHasCheckedAuth(true);
       console.log('[AuthContext] setIsLoading(false) (server)');
     }
   }, []);
@@ -193,7 +208,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       value={{ 
         user, 
         isAuthenticated, 
-        isLoading, 
+        isLoading: isLoading || !hasCheckedAuth, 
         isAdmin,
         isEntryUser,
         isExitUser,

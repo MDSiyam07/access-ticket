@@ -5,25 +5,18 @@ const prisma = new PrismaClient();
 
 export async function POST(request: NextRequest) {
   try {
-    const { tickets, eventId } = await request.json();
+    const { tickets, eventId, ticketType = 'NORMAL' } = await request.json();
 
-    if (!tickets || !Array.isArray(tickets)) {
+    if (!tickets || !Array.isArray(tickets) || tickets.length === 0) {
       return NextResponse.json(
-        { error: 'Données invalides. Un tableau de numéros de tickets est requis.' },
+        { error: 'Liste de tickets requise' },
         { status: 400 }
       );
     }
 
     if (!eventId) {
       return NextResponse.json(
-        { error: 'L\'identifiant de l\'événement est requis.' },
-        { status: 400 }
-      );
-    }
-
-    if (tickets.length === 0) {
-      return NextResponse.json(
-        { error: 'Aucun ticket à importer.' },
+        { error: 'ID de l\'événement requis' },
         { status: 400 }
       );
     }
@@ -35,62 +28,39 @@ export async function POST(request: NextRequest) {
 
     if (!event) {
       return NextResponse.json(
-        { error: 'Événement non trouvé.' },
+        { error: 'Événement non trouvé' },
         { status: 404 }
-      );
-    }
-
-    // Nettoyer et valider les numéros de tickets
-    const cleanTickets = tickets
-      .map((ticket: unknown) => String(ticket).trim())
-      .filter((ticket: string) => ticket.length > 0);
-
-    if (cleanTickets.length === 0) {
-      return NextResponse.json(
-        { error: 'Aucun numéro de ticket valide trouvé.' },
-        { status: 400 }
       );
     }
 
     let imported = 0;
     let duplicates = 0;
 
-    // Traiter chaque ticket individuellement
-    for (const ticketNumber of cleanTickets) {
+    for (const ticketNumber of tickets) {
       try {
-        // Vérifier si le ticket existe déjà dans cet événement
-        const existingTicket = await prisma.ticket.findFirst({
-          where: { 
-            number: ticketNumber,
-            eventId: eventId,
-          },
-          include: {
-            scanHistory: {
-              orderBy: { scannedAt: 'desc' },
-              take: 1,
-            },
-          },
+        // Vérifier si le ticket existe déjà
+        const existingTicket = await prisma.ticket.findUnique({
+          where: { number: ticketNumber },
         });
 
         if (existingTicket) {
-          // Ticket existe déjà dans cet événement
           duplicates++;
           continue;
         }
 
-        // Créer le nouveau ticket avec statut PENDING et l'eventId
+        // Créer le nouveau ticket avec le type spécifié
         await prisma.ticket.create({
           data: {
             number: ticketNumber,
-            status: 'PENDING',
             eventId: eventId,
+            ticketType: ticketType, // Utiliser le type spécifié
           },
         });
 
         imported++;
       } catch (error) {
         console.error(`Erreur lors de l'import du ticket ${ticketNumber}:`, error);
-        // Continuer avec les autres tickets même en cas d'erreur sur un ticket
+        duplicates++;
       }
     }
 
@@ -98,12 +68,11 @@ export async function POST(request: NextRequest) {
       success: true,
       imported,
       duplicates,
-      total: cleanTickets.length,
       eventName: event.name,
     });
 
   } catch (error) {
-    console.error('Erreur lors de l\'import des tickets:', error);
+    console.error('Erreur lors de l\'import:', error);
     return NextResponse.json(
       { error: 'Erreur interne du serveur' },
       { status: 500 }

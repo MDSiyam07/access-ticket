@@ -1,7 +1,7 @@
 'use client';
 
 import { useAuth } from '@/app/contexts/AuthContext';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { AlertTriangle } from 'lucide-react';
 import LoadingSpinner from '@/components/LoadingSpinner';
 
@@ -12,14 +12,20 @@ interface AdminRouteProps {
 
 export default function AdminRoute({ children, fallback }: AdminRouteProps) {
   const { isAdmin, isAuthenticated, isLoading } = useAuth();
+  const [hasRedirected, setHasRedirected] = useState(false);
 
   useEffect(() => {
+    // Éviter les redirections multiples
+    if (hasRedirected) return;
+
     if (!isLoading && !isAuthenticated) {
+      setHasRedirected(true);
       window.location.href = '/login';
     } else if (!isLoading && isAuthenticated && !isAdmin) {
+      setHasRedirected(true);
       window.location.href = '/dashboard';
     }
-  }, [isAdmin, isAuthenticated, isLoading]);
+  }, [isAdmin, isAuthenticated, isLoading, hasRedirected]);
 
   if (isLoading) {
     return (

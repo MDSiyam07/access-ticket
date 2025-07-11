@@ -8,15 +8,15 @@ datasource db {
 }
 
 model Event {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   name        String
   description String?
   startDate   DateTime?
   endDate     DateTime?
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
   // Relations
   tickets     Ticket[]
   users       User[]
@@ -30,16 +30,20 @@ model User {
   createdAt DateTime @default(now())
   name      String
   role      UserRole @default(ENTRY)
-  
+
   // Relation avec Event
-  eventId   String?
-  event     Event?   @relation(fields: [eventId], references: [id])
+  eventId String?
+  event   Event?  @relation(fields: [eventId], references: [id])
+
+  // Relation avec les scans effectués par cet utilisateur
+  scans ScanHistory[] @relation("UserScans")
 }
 
 model Ticket {
   id          String        @id @default(cuid())
   number      String        @unique
   status      Status        @default(PENDING)
+  ticketType  TicketType    @default(NORMAL)
   scannedAt   DateTime?
   soldAt      DateTime?
   entryType   EntryType?
@@ -57,11 +61,15 @@ model ScanHistory {
   ticketId  String
   action    Action
   scannedAt DateTime @default(now())
-  
+
   // Relations
-  ticket    Ticket   @relation(fields: [ticketId], references: [id])
-  eventId   String
-  event     Event    @relation(fields: [eventId], references: [id])
+  ticket  Ticket @relation(fields: [ticketId], references: [id])
+  eventId String
+  event   Event  @relation(fields: [eventId], references: [id])
+
+  // Optionnel : l'utilisateur qui a effectué l'action (vendeur, contrôleur, etc.)
+  vendeurId String?
+  vendeur   User?   @relation("UserScans", fields: [vendeurId], references: [id])
 }
 
 enum Status {
@@ -70,6 +78,13 @@ enum Status {
   EXITED
   MANUAL
   VENDU
+}
+
+enum TicketType {
+  NORMAL
+  VIP
+  ARTISTE
+  STAFF
 }
 
 enum EntryType {
