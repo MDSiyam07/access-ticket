@@ -34,14 +34,45 @@ export async function GET(request: NextRequest) {
       },
     });
 
+    // Récupérer les informations des vendeurs séparément
+    const vendeurIds = recentActivity
+      .map(activity => {
+        const record = activity as unknown as { vendeurId?: string };
+        return record.vendeurId;
+      })
+      .filter(id => id !== null && id !== undefined) as string[];
+
+    let vendeursMap = new Map();
+    if (vendeurIds.length > 0) {
+      const vendeurs = await prisma.user.findMany({
+        where: {
+          id: { in: vendeurIds }
+        },
+        select: {
+          id: true,
+          email: true,
+          name: true,
+        }
+      });
+      vendeursMap = new Map(vendeurs.map(v => [v.id, v]));
+    }
+
     // Formater les données pour l'affichage
-    const formattedActivity = recentActivity.map((activity) => ({
-      id: activity.id,
-      ticketNumber: activity.ticket.number,
-      action: activity.action,
-      scannedAt: activity.scannedAt,
-      timeAgo: getTimeAgo(activity.scannedAt),
-    }));
+    const formattedActivity = recentActivity.map((activity) => {
+      const record = activity as unknown as { vendeurId?: string };
+      const vendeurId = record.vendeurId;
+      const vendeur = vendeurId ? vendeursMap.get(vendeurId) : null;
+      
+      return {
+        id: activity.id,
+        ticketNumber: activity.ticket.number,
+        action: activity.action,
+        scannedAt: activity.scannedAt,
+        timeAgo: getTimeAgo(activity.scannedAt),
+        operator: vendeur?.email || null,
+        operatorName: vendeur?.name || null,
+      };
+    });
 
     return NextResponse.json({
       success: true,

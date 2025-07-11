@@ -5,7 +5,7 @@ const prisma = new PrismaClient();
 
 export async function POST(request: NextRequest) {
   try {
-    const { ticketNumber, action, entryType = 'SCAN' } = await request.json();
+    const { ticketNumber, action, entryType = 'SCAN', userId } = await request.json();
 
     if (!ticketNumber || !action) {
       return NextResponse.json(
@@ -73,6 +73,7 @@ export async function POST(request: NextRequest) {
             ticketId: ticket.id,
             eventId: ticket.eventId,
             action: 'ENTER',
+            vendeurId: userId,
           },
         }),
       ]);
@@ -123,6 +124,7 @@ export async function POST(request: NextRequest) {
             ticketId: ticket.id,
             eventId: ticket.eventId,
             action: 'EXIT',
+            vendeurId: userId,
           },
         }),
       ]);
