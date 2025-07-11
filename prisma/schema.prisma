@@ -80,6 +80,7 @@ enum EntryType {
 enum Action {
   ENTER
   EXIT
+  SOLD
 }
 
 enum UserRole {

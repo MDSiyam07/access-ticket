@@ -1,13 +1,27 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    // Récupérer les 10 dernières activités de scan
+    const { searchParams } = new URL(request.url);
+    const eventId = searchParams.get('eventId');
+    const limit = parseInt(searchParams.get('limit') || '10');
+
+    if (!eventId) {
+      return NextResponse.json(
+        { error: 'L\'identifiant de l\'événement est requis.' },
+        { status: 400 }
+      );
+    }
+
+    // Récupérer l'historique de scan pour cet événement
     const recentActivity = await prisma.scanHistory.findMany({
-      take: 10,
+      where: {
+        eventId: eventId
+      },
+      take: Math.min(limit, 100), // Limiter à 100 maximum
       orderBy: {
         scannedAt: 'desc',
       },

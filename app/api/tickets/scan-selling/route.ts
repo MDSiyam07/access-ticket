@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
       data: {
         ticketId: ticket.id,
         eventId: ticket.eventId,
-        action: 'ENTER', // ou 'SELL' si tu veux une action spéciale
+        action: 'SOLD', // Action de vente
       },
     });
 

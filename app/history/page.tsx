@@ -1,100 +1,157 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, Filter, Download, UserCheck, UserX } from 'lucide-react';
+import { Search, Filter, Download, UserCheck, UserX, ChevronDown } from 'lucide-react';
+
+interface Event {
+  id: string;
+  name: string;
+  startDate?: string;
+  endDate?: string;
+  isActive: boolean;
+}
 
 interface ScanRecord {
   id: string;
   ticketId: string;
-  type: 'entry' | 'exit';
-  status: 'success' | 'failed' | 'duplicate';
-  timestamp: Date;
-  operator: string;
+  ticketNumber: string;
+  action: 'ENTER' | 'EXIT';
+  scannedAt: string;
+  eventId: string;
+  eventName: string;
+  operator?: string;
 }
 
 export default function History() {
+  const [selectedEventId, setSelectedEventId] = useState<string>('');
+  const [events, setEvents] = useState<Event[]>([]);
+  const [records, setRecords] = useState<ScanRecord[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('all');
-  const [filterStatus, setFilterStatus] = useState('all');
+  const [filterOperator, setFilterOperator] = useState('all');
+  const [users, setUsers] = useState<{id: string, email: string, name?: string}[]>([]);
+  const [showEventDropdown, setShowEventDropdown] = useState(false);
 
-  // Mock data
-  const [records] = useState<ScanRecord[]>([
-    {
-      id: '1',
-      ticketId: 'TK1234',
-      type: 'entry',
-      status: 'success',
-      timestamp: new Date(Date.now() - 30000),
-      operator: 'admin@festival.com'
-    },
-    {
-      id: '2',
-      ticketId: 'TK5678',
-      type: 'exit',
-      status: 'success',
-      timestamp: new Date(Date.now() - 120000),
-      operator: 'admin@festival.com'
-    },
-    {
-      id: '3',
-      ticketId: 'TK9012',
-      type: 'entry',
-      status: 'duplicate',
-      timestamp: new Date(Date.now() - 300000),
-      operator: 'admin@festival.com'
-    },
-    {
-      id: '4',
-      ticketId: 'TK3456',
-      type: 'entry',
-      status: 'failed',
-      timestamp: new Date(Date.now() - 600000),
-      operator: 'admin@festival.com'
-    },
-    {
-      id: '5',
-      ticketId: 'TK7890',
-      type: 'entry',
-      status: 'success',
-      timestamp: new Date(Date.now() - 900000),
-      operator: 'admin@festival.com'
+  // Charger les événements au montage
+  useEffect(() => {
+    fetchEvents();
+  }, []);
+
+  // Charger l'historique quand un événement est sélectionné
+  useEffect(() => {
+    if (selectedEventId) {
+      fetchHistory();
     }
-  ]);
+  }, [selectedEventId]);
+
+  // Charger la liste des utilisateurs au montage
+  useEffect(() => {
+    fetchUsers();
+  }, []);
+
+  // Fermer le dropdown quand on clique à l'extérieur
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Element;
+      if (!target.closest('.event-dropdown')) {
+        setShowEventDropdown(false);
+      }
+    };
+
+    if (showEventDropdown) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showEventDropdown]);
+
+  const fetchEvents = async () => {
+    try {
+      const response = await fetch('/api/events');
+      if (response.ok) {
+        const eventsData = await response.json();
+        setEvents(eventsData);
+        // Sélectionner automatiquement le premier événement actif
+        const activeEvent = eventsData.find((event: Event) => event.isActive);
+        if (activeEvent) {
+          setSelectedEventId(activeEvent.id);
+        } else if (eventsData.length > 0) {
+          setSelectedEventId(eventsData[0].id);
+        }
+      }
+    } catch (error) {
+      console.error('Erreur lors du chargement des événements:', error);
+    }
+  };
+
+  const fetchHistory = async () => {
+    if (!selectedEventId) return;
+    
+    try {
+      setLoading(true);
+      const response = await fetch(`/api/tickets/activity?eventId=${selectedEventId}&limit=100`);
+      if (response.ok) {
+        const data = await response.json();
+        setRecords(data.activity || []);
+      }
+    } catch (error) {
+      console.error('Erreur lors du chargement de l\'historique:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchUsers = async () => {
+    try {
+      const response = await fetch('/api/users');
+      if (response.ok) {
+        const usersData = await response.json();
+        setUsers(usersData);
+      }
+    } catch (error) {
+      console.error('Erreur lors du chargement des utilisateurs:', error);
+    }
+  };
+
+  const selectedEvent = events.find(event => event.id === selectedEventId);
 
   const filteredRecords = records.filter(record => {
-    const matchesSearch = record.ticketId.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesType = filterType === 'all' || record.type === filterType;
-    const matchesStatus = filterStatus === 'all' || record.status === filterStatus;
-    return matchesSearch && matchesType && matchesStatus;
+    const matchesSearch = record.ticketNumber.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesType = filterType === 'all' || record.action.toLowerCase() === filterType;
+    const matchesOperator = filterOperator === 'all' || (record.operator || '') === filterOperator;
+    return matchesSearch && matchesType && matchesOperator;
   });
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'success':
-        return <Badge className="bg-green-100 text-green-800 hover:bg-green-100">Succès</Badge>;
-      case 'failed':
-        return <Badge className="bg-red-100 text-red-800 hover:bg-red-100">Échec</Badge>;
-      case 'duplicate':
-        return <Badge className="bg-gray-100 text-gray-800 hover:bg-gray-100">Déjà utilisé</Badge>;
+  const getStatusBadge = (action: string) => {
+    switch (action) {
+      case 'ENTER':
+        return <Badge className="bg-green-100 text-green-800 hover:bg-green-100">Entrée</Badge>;
+      case 'EXIT':
+        return <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100">Sortie</Badge>;
+      case 'SOLD':
+        return <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">Vendu</Badge>;
       default:
-        return <Badge variant="secondary">{status}</Badge>;
+        return <Badge variant="secondary">{action}</Badge>;
     }
   };
 
-  const getTypeIcon = (type: string) => {
-    return type === 'entry' ? (
-      <UserCheck className="w-4 h-4 text-green-600" />
-    ) : (
-      <UserX className="w-4 h-4 text-gray-600" />
-    );
+  const getTypeIcon = (action: string) => {
+    if (action === 'ENTER') return <UserCheck className="w-4 h-4 text-green-600" />;
+    if (action === 'EXIT') return <UserX className="w-4 h-4 text-gray-600" />;
+    if (action === 'SOLD') return <Download className="w-4 h-4 text-yellow-600" />;
+    return null;
   };
 
-  const formatTime = (date: Date) => {
+  const formatTime = (dateString: string) => {
+    const date = new Date(dateString);
     return date.toLocaleTimeString('fr-FR', {
       hour: '2-digit',
       minute: '2-digit',
@@ -102,12 +159,32 @@ export default function History() {
     });
   };
 
-  const formatDate = (date: Date) => {
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
     return date.toLocaleDateString('fr-FR', {
       day: '2-digit',
       month: '2-digit',
       year: 'numeric'
     });
+  };
+
+  const getTimeAgo = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+    if (diffInSeconds < 60) {
+      return 'À l\'instant';
+    } else if (diffInSeconds < 3600) {
+      const minutes = Math.floor(diffInSeconds / 60);
+      return `Il y a ${minutes} min`;
+    } else if (diffInSeconds < 86400) {
+      const hours = Math.floor(diffInSeconds / 3600);
+      return `Il y a ${hours}h`;
+    } else {
+      const days = Math.floor(diffInSeconds / 86400);
+      return `Il y a ${days}j`;
+    }
   };
 
   return (
@@ -122,10 +199,48 @@ export default function History() {
             Consultez l&apos;historique complet des validations de billets
           </p>
         </div>
-        <Button variant="outline" className="mt-4 sm:mt-0">
-          <Download className="w-4 h-4 mr-2" />
-          Exporter
-        </Button>
+        <div className="flex items-center gap-3 mt-4 sm:mt-0">
+          {/* Dropdown de sélection d'événement */}
+          <div className="relative event-dropdown">
+            <button
+              onClick={() => setShowEventDropdown(!showEventDropdown)}
+              className="flex items-center gap-2 bg-white border border-gray-300 rounded-lg px-4 py-2 hover:bg-gray-50 transition-colors"
+            >
+              <span className="text-sm font-medium text-gray-700">
+                {selectedEvent ? selectedEvent.name : 'Sélectionner un événement'}
+              </span>
+              <ChevronDown className="w-4 h-4 text-gray-500" />
+            </button>
+            
+            {showEventDropdown && (
+              <div className="absolute right-0 top-full mt-1 bg-gray-200 border border-gray-300 rounded-lg shadow-lg z-10 min-w-[200px]">
+                {events.map((event) => (
+                  <button
+                    key={event.id}
+                    onClick={() => {
+                      setSelectedEventId(event.id);
+                      setShowEventDropdown(false);
+                    }}
+                    className={`w-full text-left px-4 py-2 hover:bg-gray-50 transition-colors ${
+                      selectedEventId === event.id ? 'bg-blue-50 text-blue-700' : 'text-gray-700'
+                    }`}
+                  >
+                    <div className="font-medium">{event.name}</div>
+                    {event.startDate && (
+                      <div className="text-xs text-gray-500">
+                        {new Date(event.startDate).toLocaleDateString()}
+                      </div>
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+          <Button variant="outline">
+            <Download className="w-4 h-4 mr-2" />
+            Exporter
+          </Button>
+        </div>
       </div>
 
       {/* Filters */}
@@ -158,22 +273,25 @@ export default function History() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Tous les types</SelectItem>
-                  <SelectItem value="entry">Entrée</SelectItem>
+                  <SelectItem value="enter">Entrée</SelectItem>
                   <SelectItem value="exit">Sortie</SelectItem>
+                  <SelectItem value="sold">Vendu</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700">Statut</label>
-              <Select value={filterStatus} onValueChange={setFilterStatus}>
+              <label className="text-sm font-medium text-gray-700">Opérateur</label>
+              <Select value={filterOperator} onValueChange={setFilterOperator}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Tous les statuts" />
+                  <SelectValue placeholder="Tous les opérateurs" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Tous les statuts</SelectItem>
-                  <SelectItem value="success">Succès</SelectItem>
-                  <SelectItem value="failed">Échec</SelectItem>
-                  <SelectItem value="duplicate">Déjà utilisé</SelectItem>
+                  <SelectItem value="all">Tous les opérateurs</SelectItem>
+                  {users.map((user) => (
+                    <SelectItem key={user.id} value={user.email}>
+                      {user.name ? `${user.name} (${user.email})` : user.email}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -186,10 +304,20 @@ export default function History() {
         <CardHeader>
           <CardTitle>
             Résultats ({filteredRecords.length})
+            {selectedEvent && (
+              <span className="text-sm font-normal text-gray-500 ml-2">
+                pour {selectedEvent.name}
+              </span>
+            )}
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {filteredRecords.length === 0 ? (
+          {loading ? (
+            <div className="text-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
+              <p className="text-gray-500 mt-2">Chargement...</p>
+            </div>
+          ) : filteredRecords.length === 0 ? (
             <div className="text-center py-8">
               <p className="text-gray-500">Aucun résultat trouvé</p>
             </div>
@@ -202,23 +330,23 @@ export default function History() {
                   <div>Type</div>
                   <div>Statut</div>
                   <div>Date/Heure</div>
-                  <div>Opérateur</div>
+                  <div>Il y a</div>
                 </div>
                 {filteredRecords.map((record) => (
                   <div key={record.id} className="grid grid-cols-5 gap-4 p-3 border-b border-gray-100 hover:bg-gray-50 transition-colors">
-                    <div className="font-mono font-medium">{record.ticketId}</div>
+                    <div className="font-mono font-medium">{record.ticketNumber}</div>
                     <div className="flex items-center">
-                      {getTypeIcon(record.type)}
+                      {getTypeIcon(record.action)}
                       <span className="ml-2 capitalize">
-                        {record.type === 'entry' ? 'Entrée' : 'Sortie'}
+                        {record.action === 'ENTER' ? 'Entrée' : 'Sortie'}
                       </span>
                     </div>
-                    <div>{getStatusBadge(record.status)}</div>
+                    <div>{getStatusBadge(record.action)}</div>
                     <div className="text-sm">
-                      <div>{formatDate(record.timestamp)}</div>
-                      <div className="text-gray-500">{formatTime(record.timestamp)}</div>
+                      <div>{formatDate(record.scannedAt)}</div>
+                      <div className="text-gray-500">{formatTime(record.scannedAt)}</div>
                     </div>
-                    <div className="text-sm text-gray-600">{record.operator}</div>
+                    <div className="text-sm text-gray-600">{getTimeAgo(record.scannedAt)}</div>
                   </div>
                 ))}
               </div>
@@ -228,18 +356,18 @@ export default function History() {
                 {filteredRecords.map((record) => (
                   <Card key={record.id} className="p-4">
                     <div className="flex items-center justify-between mb-2">
-                      <div className="font-mono font-bold text-lg">{record.ticketId}</div>
-                      {getStatusBadge(record.status)}
+                      <div className="font-mono font-bold text-lg">{record.ticketNumber}</div>
+                      {getStatusBadge(record.action)}
                     </div>
                     <div className="flex items-center mb-2">
-                      {getTypeIcon(record.type)}
+                      {getTypeIcon(record.action)}
                       <span className="ml-2 font-medium">
-                        {record.type === 'entry' ? 'Entrée' : 'Sortie'}
+                        {record.action === 'ENTER' ? 'Entrée' : 'Sortie'}
                       </span>
                     </div>
                     <div className="text-sm text-gray-600">
-                      <div>{formatDate(record.timestamp)} à {formatTime(record.timestamp)}</div>
-                      <div>Par: {record.operator}</div>
+                      <div>{formatDate(record.scannedAt)} à {formatTime(record.scannedAt)}</div>
+                      <div>{getTimeAgo(record.scannedAt)}</div>
                     </div>
                   </Card>
                 ))}
