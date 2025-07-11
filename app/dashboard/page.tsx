@@ -42,7 +42,7 @@ interface UserSalesStats {
 interface Activity {
   id: string;
   ticketNumber: string;
-  action: 'ENTER' | 'EXIT';
+  action: 'ENTER' | 'EXIT' | 'SOLD';
   scannedAt: string;
   timeAgo: string;
 }
@@ -369,8 +369,8 @@ export default function Dashboard() {
 
       {/* Live Activity - seulement pour les admins */}
       {isAdmin && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Card className="glass-card">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <Card className="glass-card lg:col-span-2">
             <CardHeader>
               <CardTitle className="flex items-center">
                 <Clock className="w-5 h-5 mr-2 text-modern-cyan-600" />
@@ -384,13 +384,17 @@ export default function Dashboard() {
                     <div
                       key={item.id}
                       className={`flex items-center justify-between p-3 rounded-lg ${
-                        item.action === 'ENTER' ? 'bg-green-50' : 'bg-blue-50'
+                        item.action === 'ENTER' ? 'bg-green-50' : 
+                        item.action === 'EXIT' ? 'bg-blue-50' : 
+                        'bg-yellow-50'
                       }`}
                     >
                       <div className="flex items-center">
                         <div
                           className={`w-2 h-2 rounded-full mr-3 ${
-                            item.action === 'ENTER' ? 'bg-green-500' : 'bg-blue-500'
+                            item.action === 'ENTER' ? 'bg-green-500' : 
+                            item.action === 'EXIT' ? 'bg-blue-500' : 
+                            'bg-yellow-500'
                           }`}
                         />
                         <div>
@@ -398,7 +402,9 @@ export default function Dashboard() {
                             Ticket #{item.ticketNumber}
                           </p>
                           <p className="text-sm text-gray-500">
-                            {item.action === 'ENTER' ? 'Entrée' : 'Sortie'} - {item.timeAgo}
+                            {item.action === 'ENTER' ? 'Entrée' : 
+                             item.action === 'EXIT' ? 'Sortie' : 
+                             'Vente'} - {item.timeAgo}
                           </p>
                         </div>
                       </div>
@@ -406,10 +412,14 @@ export default function Dashboard() {
                         className={`text-xs font-medium px-2 py-1 rounded-full ${
                           item.action === 'ENTER'
                             ? 'bg-green-100 text-green-800'
-                            : 'bg-blue-100 text-blue-800'
+                            : item.action === 'EXIT'
+                            ? 'bg-blue-100 text-blue-800'
+                            : 'bg-yellow-100 text-yellow-800'
                         }`}
                       >
-                        {item.action === 'ENTER' ? 'ENTRÉE' : 'SORTIE'}
+                        {item.action === 'ENTER' ? 'ENTRÉE' : 
+                         item.action === 'EXIT' ? 'SORTIE' : 
+                         'VENDU'}
                       </span>
                     </div>
                   ))
@@ -464,7 +474,7 @@ export default function Dashboard() {
           </Card>
 
           {/* Statistiques de ventes par utilisateur */}
-          <Card className="glass-card">
+          <Card className="glass-card lg:col-span-3">
             <CardHeader>
               <CardTitle className="flex items-center">
                 <ShoppingCart className="w-5 h-5 mr-2 text-modern-gold-600" />
@@ -472,12 +482,12 @@ export default function Dashboard() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {userSalesStats.length > 0 ? (
                   userSalesStats.map((user) => (
-                    <div key={user.id} className="flex items-center justify-between p-3 rounded-lg bg-gray-50">
+                    <div key={user.id} className="flex items-center justify-between p-4 rounded-lg bg-gray-50 border border-gray-100">
                       <div className="flex items-center">
-                        <div className="w-8 h-8 bg-modern-gold-500 text-white rounded-full flex items-center justify-center text-sm font-medium">
+                        <div className="w-10 h-10 bg-modern-gold-500 text-white rounded-full flex items-center justify-center text-sm font-medium">
                           {user.name.charAt(0).toUpperCase()}
                         </div>
                         <div className="ml-3">
@@ -486,7 +496,7 @@ export default function Dashboard() {
                         </div>
                       </div>
                       <div className="text-right">
-                        <p className="text-lg font-bold text-modern-gold-600">
+                        <p className="text-xl font-bold text-modern-gold-600">
                           {user.totalSales}
                         </p>
                         <p className="text-xs text-gray-500">ventes</p>
@@ -494,7 +504,7 @@ export default function Dashboard() {
                     </div>
                   ))
                 ) : (
-                  <div className="text-center py-8 text-gray-500">
+                  <div className="col-span-full text-center py-8 text-gray-500">
                     <ShoppingCart className="w-12 h-12 mx-auto mb-4 text-gray-300" />
                     <p>Aucun vendeur trouvé</p>
                   </div>

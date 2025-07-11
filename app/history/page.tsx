@@ -325,22 +325,15 @@ export default function History() {
             <div className="space-y-3">
               {/* Desktop view */}
               <div className="hidden md:block">
-                <div className="grid grid-cols-5 gap-4 p-3 bg-gray-50 rounded-lg font-medium text-sm text-gray-700">
+                <div className="grid grid-cols-4 gap-4 p-3 bg-gray-50 rounded-lg font-medium text-sm text-gray-700">
                   <div>Billet</div>
-                  <div>Type</div>
                   <div>Statut</div>
                   <div>Date/Heure</div>
                   <div>Il y a</div>
                 </div>
                 {filteredRecords.map((record) => (
-                  <div key={record.id} className="grid grid-cols-5 gap-4 p-3 border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                  <div key={record.id} className="grid grid-cols-4 gap-4 p-3 border-b border-gray-100 hover:bg-gray-50 transition-colors">
                     <div className="font-mono font-medium">{record.ticketNumber}</div>
-                    <div className="flex items-center">
-                      {getTypeIcon(record.action)}
-                      <span className="ml-2 capitalize">
-                        {record.action === 'ENTER' ? 'Entrée' : 'Sortie'}
-                      </span>
-                    </div>
                     <div>{getStatusBadge(record.action)}</div>
                     <div className="text-sm">
                       <div>{formatDate(record.scannedAt)}</div>
