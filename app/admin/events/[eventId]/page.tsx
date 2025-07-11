@@ -6,7 +6,7 @@ import { useEffect, useState } from 'react';
 import TicketImport from '../../../../components/TicketImport';
 import ImportStats from '../../../../components/ImportStats';
 import AdminRoute from '../../../../components/AdminRoute';
-import { Shield, ArrowLeft, FileText, BarChart3, Users, Download } from 'lucide-react';
+import { Shield, ArrowLeft, FileText, BarChart3, Users } from 'lucide-react';
 import LoadingSpinner from '../../../../components/LoadingSpinner';
 
 interface Event {
@@ -143,7 +143,7 @@ export default function EventManagementPage() {
               <p className="text-gray-600 text-sm mb-4">
                 Visualisez les statistiques détaillées pour cet événement
               </p>
-              <button
+              {/* <button
                 onClick={async () => {
                   try {
                     const response = await fetch(`/api/events/${event.id}/export`);
@@ -169,7 +169,7 @@ export default function EventManagementPage() {
               >
                 <Download className="w-4 h-4" />
                 Exporter les statistiques
-              </button>
+              </button> */}
             </div>
 
             <div className="bg-white rounded-lg shadow-lg p-6 border-l-4 border-purple-500 hover:shadow-xl transition-shadow cursor-pointer" onClick={() => router.push(`/admin/events/${event.id}/users`)}>
@@ -199,33 +199,6 @@ export default function EventManagementPage() {
                   Toutes les opérations ci-dessous concernent cet événement spécifique. 
                 </p>
               </div>
-              <button
-                onClick={async () => {
-                  try {
-                    const response = await fetch(`/api/events/${event.id}/export`);
-                    if (response.ok) {
-                      const blob = await response.blob();
-                      const url = window.URL.createObjectURL(blob);
-                      const a = document.createElement('a');
-                      a.href = url;
-                      a.download = `statistiques-${event.name}-${new Date().toISOString().split('T')[0]}.csv`;
-                      document.body.appendChild(a);
-                      a.click();
-                      window.URL.revokeObjectURL(url);
-                      document.body.removeChild(a);
-                    } else {
-                      alert('Erreur lors de l\'export des statistiques');
-                    }
-                  } catch (error) {
-                    console.error('Erreur lors de l\'export:', error);
-                    alert('Erreur lors de l\'export des statistiques');
-                  }
-                }}
-                className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors"
-              >
-                <Download className="w-4 h-4" />
-                Exporter les statistiques
-              </button>
             </div>
             
             <ImportStats eventId={event.id} />
