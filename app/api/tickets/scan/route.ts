@@ -71,6 +71,7 @@ export async function POST(request: NextRequest) {
         prisma.scanHistory.create({
           data: {
             ticketId: ticket.id,
+            eventId: ticket.eventId,
             action: 'ENTER',
           },
         }),
@@ -120,6 +121,7 @@ export async function POST(request: NextRequest) {
         prisma.scanHistory.create({
           data: {
             ticketId: ticket.id,
+            eventId: ticket.eventId,
             action: 'EXIT',
           },
         }),

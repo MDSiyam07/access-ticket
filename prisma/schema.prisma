@@ -7,6 +7,22 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model Event {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  startDate   DateTime?
+  endDate     DateTime?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  tickets     Ticket[]
+  users       User[]
+  scanHistory ScanHistory[]
+}
+
 model User {
   id        String   @id @default(cuid())
   email     String   @unique
@@ -14,6 +30,10 @@ model User {
   createdAt DateTime @default(now())
   name      String
   role      UserRole @default(ENTRY)
+  
+  // Relation avec Event
+  eventId   String?
+  event     Event?   @relation(fields: [eventId], references: [id])
 }
 
 model Ticket {
@@ -24,6 +44,11 @@ model Ticket {
   soldAt      DateTime?
   entryType   EntryType?
   createdAt   DateTime      @default(now())
+  
+  // Relation avec Event
+  eventId     String
+  event       Event         @relation(fields: [eventId], references: [id])
+  
   scanHistory ScanHistory[]
 }
 
@@ -32,7 +57,11 @@ model ScanHistory {
   ticketId  String
   action    Action
   scannedAt DateTime @default(now())
+  
+  // Relations
   ticket    Ticket   @relation(fields: [ticketId], references: [id])
+  eventId   String
+  event     Event    @relation(fields: [eventId], references: [id])
 }
 
 enum Status {

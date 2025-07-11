@@ -2,16 +2,16 @@
 
 import { useAuth } from '../contexts/AuthContext';
 import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
-import TicketImport from '../../components/TicketImport';
-import ImportStats from '../../components/ImportStats';
+import { useEffect, useState } from 'react';
+import EventManager from '../../components/EventManager';
 import AdminRoute from '../../components/AdminRoute';
-import { Shield, Users, FileText, BarChart3 } from 'lucide-react';
+import { Shield, Users, FileText, BarChart3, Calendar } from 'lucide-react';
 import LoadingSpinner from '../../components/LoadingSpinner';
 
 export default function AdminPage() {
   const { user, isAuthenticated, isLoading } = useAuth();
   const router = useRouter();
+  const [selectedEventId, setSelectedEventId] = useState<string | undefined>();
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -52,7 +52,7 @@ export default function AdminPage() {
           </div>
 
           {/* Grille des fonctionnalités admin */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
             <div className="bg-white rounded-lg shadow-lg p-6 border-l-4 border-blue-500">
               <div className="flex items-center mb-4">
                 <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center mr-3">
@@ -87,17 +87,45 @@ export default function AdminPage() {
               <p className="text-gray-600 text-sm mb-4">
                 Gérez les accès et permissions des utilisateurs
               </p>
-              <div className="text-purple-600 text-sm font-medium">
-                Cliquer pour accéder →
+            </div>
+
+            <div className="bg-white rounded-lg shadow-lg p-6 border-l-4 border-orange-500">
+              <div className="flex items-center mb-4">
+                <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center mr-3">
+                  <Calendar className="w-5 h-5 text-orange-600" />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900">Gestion des Événements</h3>
               </div>
+              <p className="text-gray-600 text-sm mb-4">
+                Créez et gérez vos festivals et événements
+              </p>
             </div>
           </div>
 
-          {/* Contenu principal */}
-          <div className="bg-white rounded-lg shadow-lg p-6">
-            <ImportStats />
-            <div className="mt-8">
-              <TicketImport />
+          {/* Gestion des événements */}
+          <div className="mb-8">
+            <EventManager 
+              selectedEventId={selectedEventId}
+              onEventSelect={setSelectedEventId}
+              redirectToEventPage={true}
+            />
+          </div>
+
+          {/* Message d'information */}
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-8">
+            <div className="flex items-start">
+              <div className="flex-shrink-0">
+                <Calendar className="w-6 h-6 text-blue-600" />
+              </div>
+              <div className="ml-3">
+                <h3 className="text-lg font-medium text-blue-900">
+                  Gestion des événements
+                </h3>
+                <p className="text-blue-700 mt-1">
+                  Cliquez sur un événement ci-dessus pour accéder à sa page de gestion dédiée. 
+                  Chaque événement a sa propre page avec import de tickets, statistiques et gestion des utilisateurs.
+                </p>
+              </div>
             </div>
           </div>
         </div>

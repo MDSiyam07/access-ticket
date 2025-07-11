@@ -47,6 +47,7 @@ export async function POST(request: NextRequest) {
     await prisma.scanHistory.create({
       data: {
         ticketId: ticket.id,
+        eventId: ticket.eventId,
         action: 'ENTER', // ou 'SELL' si tu veux une action spéciale
       },
     });

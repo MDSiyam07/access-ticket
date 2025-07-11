@@ -90,7 +90,7 @@ export default function Navbar({ children }: NavbarProps) {
         { name: 'Scan Vente', href: '/scan-selling', icon: ScanLine },
         { name: 'Historique', href: '/history', icon: History },
         { name: 'Saisie Manuelle', href: '/manual-entry', icon: Edit3 },
-        { name: 'Import de fichiers', href: '/admin', icon: Settings },
+        { name: 'Gestion administrateur', href: '/admin', icon: Settings },
       ];
     } else if (isVendeurUser) {
       return [

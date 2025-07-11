@@ -5,7 +5,7 @@ const prisma = new PrismaClient();
 
 export async function POST(request: NextRequest) {
   try {
-    const { tickets } = await request.json();
+    const { tickets, eventId } = await request.json();
 
     if (!tickets || !Array.isArray(tickets)) {
       return NextResponse.json(
@@ -14,10 +14,29 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (!eventId) {
+      return NextResponse.json(
+        { error: 'L\'identifiant de l\'événement est requis.' },
+        { status: 400 }
+      );
+    }
+
     if (tickets.length === 0) {
       return NextResponse.json(
         { error: 'Aucun ticket à importer.' },
         { status: 400 }
+      );
+    }
+
+    // Vérifier que l'événement existe
+    const event = await prisma.event.findUnique({
+      where: { id: eventId },
+    });
+
+    if (!event) {
+      return NextResponse.json(
+        { error: 'Événement non trouvé.' },
+        { status: 404 }
       );
     }
 
@@ -39,9 +58,12 @@ export async function POST(request: NextRequest) {
     // Traiter chaque ticket individuellement
     for (const ticketNumber of cleanTickets) {
       try {
-        // Vérifier si le ticket existe déjà
-        const existingTicket = await prisma.ticket.findUnique({
-          where: { number: ticketNumber },
+        // Vérifier si le ticket existe déjà dans cet événement
+        const existingTicket = await prisma.ticket.findFirst({
+          where: { 
+            number: ticketNumber,
+            eventId: eventId,
+          },
           include: {
             scanHistory: {
               orderBy: { scannedAt: 'desc' },
@@ -51,16 +73,17 @@ export async function POST(request: NextRequest) {
         });
 
         if (existingTicket) {
-          // Ticket existe déjà
+          // Ticket existe déjà dans cet événement
           duplicates++;
           continue;
         }
 
-        // Créer le nouveau ticket avec statut PENDING
+        // Créer le nouveau ticket avec statut PENDING et l'eventId
         await prisma.ticket.create({
           data: {
             number: ticketNumber,
             status: 'PENDING',
+            eventId: eventId,
           },
         });
 
@@ -76,6 +99,7 @@ export async function POST(request: NextRequest) {
       imported,
       duplicates,
       total: cleanTickets.length,
+      eventName: event.name,
     });
 
   } catch (error) {

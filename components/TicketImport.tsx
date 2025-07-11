@@ -10,7 +10,11 @@ interface TicketData {
   number: string;
 }
 
-export default function TicketImport() {
+interface TicketImportProps {
+  eventId?: string;
+}
+
+export default function TicketImport({ eventId }: TicketImportProps) {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [ticketCount, setTicketCount] = useState(0);
@@ -19,6 +23,11 @@ export default function TicketImport() {
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
+
+    if (!eventId) {
+      alert('Veuillez sélectionner un événement avant d\'importer des tickets.');
+      return;
+    }
 
     setIsUploading(true);
     setUploadProgress(0);
@@ -34,13 +43,13 @@ export default function TicketImport() {
       setTicketCount(tickets.length);
       setUploadProgress(50);
 
-      // Envoyer les tickets à l'API
+      // Envoyer les tickets à l'API avec l'eventId
       const response = await fetch('/api/tickets/import', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ tickets }),
+        body: JSON.stringify({ tickets, eventId }),
       });
 
       if (!response.ok) {
@@ -140,6 +149,14 @@ export default function TicketImport() {
     return tickets;
   };
 
+  if (!eventId) {
+    return (
+      <div className="text-center text-gray-500 py-8">
+        Veuillez sélectionner un événement pour importer des tickets
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
@@ -211,7 +228,6 @@ export default function TicketImport() {
           <li>• Le fichier doit contenir une colonne nommée &quot;number&quot;, &quot;numero&quot; ou &quot;ticket&quot;</li>
           <li>• Seuls les numéros de ticket seront importés</li>
           <li>• Les tickets existants seront ignorés (pas de doublons)</li>
-          <li>• Les nouveaux tickets auront le statut &quot;PENDING&quot;</li>
           <li>• Formats supportés : CSV, Excel (.xlsx, .xls)</li>
         </ul>
       </div>
