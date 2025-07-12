@@ -232,11 +232,11 @@ export default function ScanExit() {
           <CardContent className="p-0">
             <div 
               ref={scanAreaRef}
-              className="relative aspect-square bg-gradient-to-br from-modern-violet-900 to-modern-cyan-900 rounded-t-3xl overflow-hidden"
+              className="relative aspect-square bg-gradient-to-br from-green-900 to-emerald-900 rounded-t-3xl overflow-hidden"
             >
               {/* QR Code Scanner or Result Display */}
               {scanResult ? (
-                <div className="absolute inset-0 bg-gradient-to-br from-modern-violet-800/90 to-modern-cyan-800/90 backdrop-blur-sm flex items-center justify-center">
+                <div className="absolute inset-0 bg-gradient-to-br from-green-800/90 to-emerald-800/90 backdrop-blur-sm flex items-center justify-center">
                   <div className="text-center">
                     {scanResult === 'success' ? (
                       <div className="text-center">
@@ -302,8 +302,8 @@ export default function ScanExit() {
                       className={cn(
                         "flex-1 h-14 rounded-2xl text-white text-lg font-semibold shadow-lg transition-all duration-300",
                         isScanning
-                          ? "bg-modern-cyan-600 cursor-default"
-                          : "bg-modern-cyan-500 hover:bg-modern-cyan-600 hover:shadow-xl active:scale-95",
+                          ? "bg-emerald-600 cursor-default"
+                          : "bg-emerald-500 hover:bg-emerald-600 hover:shadow-xl active:scale-95",
                         (processingRef.current || isScanning) && "opacity-50 cursor-not-allowed"
                       )}
                     >
@@ -315,9 +315,9 @@ export default function ScanExit() {
                       <Button
                         onClick={stopCamera}
                         variant="outline"
-                        className="h-14 px-6 rounded-2xl text-sm border-modern-violet-200 text-modern-violet-600 hover:bg-modern-violet-50"
+                        className="h-14 px-6 rounded-2xl text-sm border-green-200 text-green-600 hover:bg-green-50"
                       >
-                        <Square className="w-5 h-5 text-modern-violet-600" />
+                        <Square className="w-5 h-5 text-green-600" />
                       </Button>
                     )}
                   </div>
@@ -325,7 +325,7 @@ export default function ScanExit() {
                   {/* Indicateur d'état */}
                   <div className="text-center text-sm">
                     {isScanning ? (
-                      <span className="text-modern-cyan-600 font-medium">🔍 Scanner actif - Pointez vers un QR code</span>
+                      <span className="text-emerald-600 font-medium">🔍 Scanner actif - Pointez vers un QR code</span>
                     ) : (
                       <span className="text-muted-foreground">📱 Scanner prêt</span>
                     )}
@@ -336,7 +336,7 @@ export default function ScanExit() {
                     <Button
                       onClick={() => setShowManualInput(!showManualInput)}
                       variant="outline"
-                      className="w-full h-12 rounded-2xl border-modern-violet-200 text-modern-violet-700 hover:bg-modern-violet-50"
+                      className="w-full h-12 rounded-2xl border-green-200 text-green-700 hover:bg-green-50"
                       disabled={processingRef.current || isScanning}
                     >
                       <Type className="w-5 h-5 mr-2" />
@@ -365,7 +365,7 @@ export default function ScanExit() {
                         setManualTicket('');
                       }}
                       variant="outline"
-                      className="h-12 border-modern-violet-200 text-modern-violet-700 hover:bg-modern-violet-50"
+                      className="h-12 border-green-200 text-green-700 hover:bg-green-50"
                       disabled={processingRef.current}
                     >
                       Annuler

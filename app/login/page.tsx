@@ -30,7 +30,7 @@ export default function Login() {
       } else if (user.role === 'exit') {
         redirectPath = '/scan-exit';
       } else if (user.role === 'reentry') {
-        redirectPath = '/scan-entry';
+        redirectPath = '/scan-reentry';
       } else if (user.role === 'vendeur') {
         redirectPath = '/scan-selling';
       }

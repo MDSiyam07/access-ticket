@@ -4,8 +4,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Camera, CheckCircle, XCircle, Type, Square } from 'lucide-react';
-// import toast from 'react-hot-toast';
+import { Camera, CheckCircle, XCircle, Type, Square, AlertCircle } from 'lucide-react';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import ZxingQRScanner from '@/components/ZxingQRScanner';
 import QuickStats from '@/components/QuickStats';
@@ -15,9 +14,9 @@ import { offlineStorage } from '@/lib/offlineStorage';
 import { useAuth } from '@/app/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 
-type ScanResult = 'success' | 'already-used' | 'invalid' | null;
+type ScanResult = 'success' | 'invalid' | 'not-exited' | 'already-entered' | 'error' | null;
 
-export default function ScanEntry() {
+export default function ScanReentry() {
   const [isScanning, setIsScanning] = useState(false);
   const [scanResult, setScanResult] = useState<ScanResult>(null);
   const [scannedTicket, setScannedTicket] = useState('');
@@ -26,6 +25,11 @@ export default function ScanEntry() {
   const [isClient, setIsClient] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [ticketHistory, setTicketHistory] = useState<Array<{
+    action: string;
+    scannedAt: string;
+  }> | null>(null);
   
   // Refs
   const scanAreaRef = useRef<HTMLDivElement>(null);
@@ -37,26 +41,13 @@ export default function ScanEntry() {
 
   // Vérification d'authentification
   useEffect(() => {
-    console.log('[ScanEntry] Auth check - user:', user, 'authLoading:', authLoading);
+    console.log('[ScanReentry] Auth check - user:', user, 'authLoading:', authLoading);
     if (!authLoading && !user) {
-      console.log('[ScanEntry] No user, redirecting to login');
+      console.log('[ScanReentry] No user, redirecting to login');
       router.push('/login');
       return;
     }
-    
-    // Vérifier que l'utilisateur a le bon rôle pour cette page
-    if (user && !['entry', 'reentry', 'admin'].includes(user.role)) {
-      console.log('[ScanEntry] User role not allowed:', user.role);
-      router.push('/login');
-    }
   }, [user, authLoading, router]);
-
-  // Déterminer le titre selon le rôle
-  const isReentryUser = user?.role === 'reentry';
-  const pageTitle = isReentryUser ? 'Scan de Ré-entrée' : 'Scan d\'Entrée';
-  const pageDescription = isReentryUser 
-    ? 'Scannez les billets pour valider la ré-entrée à l\'événement'
-    : 'Scannez les billets pour valider l\'accès à l\'événement';
 
   // Ensure we're on the client side
   useEffect(() => {
@@ -67,7 +58,7 @@ export default function ScanEntry() {
     // Réduire le délai de chargement pour Android
     const timer = setTimeout(() => {
       setIsLoading(false);
-    }, 500); // Réduit de 1000ms à 500ms
+    }, 500);
 
     return () => {
       if (timeoutRef.current) {
@@ -80,7 +71,6 @@ export default function ScanEntry() {
   // Vérification de sécurité pour éviter les boucles infinies
   useEffect(() => {
     if (isClient && !isLoading) {
-      // Vérifier que l'authentification est stable
       const authCheck = setTimeout(() => {
         if (isLoading) {
           console.warn('Loading state stuck - forcing reset');
@@ -93,8 +83,8 @@ export default function ScanEntry() {
   }, [isClient, isLoading]);
 
   // Fonction de scan réelle avec l'API
-  const scanTicket = useCallback(async (ticketId: string): Promise<ScanResult> => {
-    console.log('Scanning ticket:', ticketId);
+  const scanTicketReentry = useCallback(async (ticketId: string): Promise<ScanResult> => {
+    console.log('Scanning reentry for ticket:', ticketId);
     
     try {
       const response = await fetch('/api/tickets/scan', {
@@ -104,8 +94,9 @@ export default function ScanEntry() {
         },
         body: JSON.stringify({
           ticketNumber: ticketId,
-          action: 'ENTER',
-          entryType: 'SCAN'
+          action: 'REENTER',
+          entryType: 'SCAN',
+          userId: user?.id
         }),
       });
 
@@ -113,17 +104,25 @@ export default function ScanEntry() {
         const error = await response.json();
         console.error('API Error:', error);
         
-        if (error.message?.includes('déjà entré')) {
-          return 'already-used';
+        if (error.message?.includes('n\'a jamais été sorti')) {
+          return 'not-exited';
+        } else if (error.message?.includes('déjà entré')) {
+          return 'already-entered';
         } else if (error.message?.includes('non trouvé')) {
           return 'invalid';
         } else {
-          return 'invalid';
+          return 'error';
         }
       }
 
       const result = await response.json();
       console.log('API Success:', result);
+      
+      // Récupérer l'historique du ticket pour l'affichage
+      if (result.ticketHistory) {
+        setTicketHistory(result.ticketHistory);
+      }
+      
       return 'success';
     } catch (error) {
       console.error('Network Error:', error);
@@ -136,9 +135,8 @@ export default function ScanEntry() {
           userId: user.id,
           userRole: user.role
         });
-        // Scan sauvegardé hors ligne
       }
-      return 'success'; // On considère comme succès localement
+      return 'success';
     }
   }, [user]);
 
@@ -147,6 +145,7 @@ export default function ScanEntry() {
     console.log('🔄 Reset scan result');
     setScanResult(null);
     setScannedTicket('');
+    setTicketHistory(null);
     processingRef.current = false;
   }, []);
 
@@ -170,7 +169,7 @@ export default function ScanEntry() {
     }
     
     try {
-      const result = await scanTicket(ticketId);
+      const result = await scanTicketReentry(ticketId);
       setScanResult(result);
 
       // Trigger stats refresh on success
@@ -186,7 +185,7 @@ export default function ScanEntry() {
       console.error('Erreur lors du scan:', error);
       resetScanResult();
     }
-  }, [scanTicket, resetScanResult]);
+  }, [scanTicketReentry, resetScanResult]);
 
   // Handlers pour l'input manuel
   const handleManualScan = useCallback(() => {
@@ -230,7 +229,7 @@ export default function ScanEntry() {
     console.log('📷 Démarrage du scanner...');
     if (!processingRef.current && !scanResult) {
       setIsScanning(true);
-      setShowManualInput(false); // Fermer la saisie manuelle
+      setShowManualInput(false);
     } else {
       console.log('⚠️ Scanner non disponible');
     }
@@ -241,17 +240,37 @@ export default function ScanEntry() {
     setIsScanning(false);
   }, []);
 
-
-
   // Don't render until we're on the client side
   if (!isClient || isLoading) {
     return (
       <div className="max-w-2xl mx-auto space-y-6">
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold gradient-text mb-2">
-            {pageTitle}
+            Scanner Ré-entrée
           </h1>
           <LoadingSpinner size="lg" text="Initialisation..." />
+        </div>
+      </div>
+    );
+  }
+
+  // Vérification des permissions
+  if (!authLoading && (!user || (user.role !== 'reentry' && user.role !== 'admin'))) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-8 text-center">
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">
+            Accès Refusé
+          </h2>
+          <p className="text-gray-600 mb-6">
+            Vous devez être contrôleur de ré-entrée ou administrateur pour accéder à cette page.
+          </p>
+          <button
+            onClick={() => window.location.href = '/dashboard'}
+            className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            Retour au tableau de bord
+          </button>
         </div>
       </div>
     );
@@ -263,10 +282,10 @@ export default function ScanEntry() {
         {/* Header */}
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold gradient-text mb-2">
-            {pageTitle}
+            Scanner Ré-entrée
           </h1>
           <p className="text-muted-foreground text-lg">
-            {pageDescription}
+            Scannez les billets pour valider la ré-entrée à l&apos;événement
           </p>
         </div>
 
@@ -275,7 +294,7 @@ export default function ScanEntry() {
           <CardContent className="p-0">
             <div 
               ref={scanAreaRef}
-              className="relative aspect-square bg-gradient-to-br from-modern-violet-900 to-modern-cyan-900 rounded-t-3xl overflow-hidden"
+              className="relative aspect-square bg-gradient-to-br from-blue-900 to-cyan-900 rounded-t-3xl overflow-hidden"
             >
               {/* Scanner QR - Toujours rendu, contrôlé par isActive */}
               <div className="absolute inset-0">
@@ -287,23 +306,36 @@ export default function ScanEntry() {
 
               {/* Result Display - Affiché par-dessus le scanner */}
               {scanResult && (
-                <div className="absolute inset-0 bg-gradient-to-br from-modern-violet-800/90 to-modern-cyan-800/90 backdrop-blur-sm flex items-center justify-center z-10">
+                <div className="absolute inset-0 bg-gradient-to-br from-blue-800/90 to-cyan-800/90 backdrop-blur-sm flex items-center justify-center z-10">
                   <div className="text-center">
                     {scanResult === 'success' ? (
                       <div className="text-center">
                         <CheckCircle className="w-24 h-24 text-green-400 mx-auto mb-4 pulse-glow" />
                         <p className="text-green-300 text-2xl font-bold mb-2">
-                          ACCÈS AUTORISÉ
+                          RÉ-ENTRÉE AUTORISÉE
                         </p>
                         <p className="text-white text-lg">
                           Billet: {scannedTicket}
                         </p>
                       </div>
-                    ) : scanResult === 'already-used' ? (
+                    ) : scanResult === 'not-exited' ? (
+                      <div className="text-center">
+                        <AlertCircle className="w-24 h-24 text-orange-400 mx-auto mb-4" />
+                        <p className="text-orange-300 text-2xl font-bold mb-2">
+                          TICKET NON AUTORISÉ
+                        </p>
+                        <p className="text-white text-lg">
+                          Billet: {scannedTicket}
+                        </p>
+                        <p className="text-white text-sm mt-2">
+                          N&apos;a jamais été sorti
+                        </p>
+                      </div>
+                    ) : scanResult === 'already-entered' ? (
                       <div className="text-center">
                         <XCircle className="w-24 h-24 text-red-400 mx-auto mb-4" />
                         <p className="text-red-300 text-2xl font-bold mb-2">
-                          BILLET DÉJÀ UTILISÉ
+                          BILLET DÉJÀ ENTRÉ
                         </p>
                         <p className="text-white text-lg">
                           Billet: {scannedTicket}
@@ -323,8 +355,6 @@ export default function ScanEntry() {
                   </div>
                 </div>
               )}
-
-
             </div>
 
             {/* Controls */}
@@ -339,8 +369,8 @@ export default function ScanEntry() {
                       className={cn(
                         "flex-1 h-14 rounded-2xl text-white text-lg font-semibold shadow-lg transition-all duration-300",
                         isScanning
-                          ? "bg-modern-cyan-600 cursor-default"
-                          : "bg-modern-cyan-500 hover:bg-modern-cyan-600 hover:shadow-xl active:scale-95",
+                          ? "bg-cyan-600 cursor-default"
+                          : "bg-cyan-500 hover:bg-cyan-600 hover:shadow-xl active:scale-95",
                         (processingRef.current || isScanning) && "opacity-50 cursor-not-allowed"
                       )}
                     >
@@ -352,9 +382,9 @@ export default function ScanEntry() {
                       <Button
                         onClick={stopCamera}
                         variant="outline"
-                        className="h-14 px-6 rounded-2xl text-sm border-red-200 text-red-600 hover:bg-red-50"
+                        className="h-14 px-6 rounded-2xl text-sm border-blue-200 text-blue-600 hover:bg-blue-50"
                       >
-                        <Square className="w-5 h-5 text-red-500" />
+                        <Square className="w-5 h-5 text-blue-600" />
                       </Button>
                     )}
                   </div>
@@ -362,7 +392,7 @@ export default function ScanEntry() {
                   {/* Indicateur d'état */}
                   <div className="text-center text-sm">
                     {isScanning ? (
-                      <span className="text-modern-cyan-600 font-medium">🔍 Scanner actif - Pointez vers un QR code</span>
+                      <span className="text-cyan-600 font-medium">🔍 Scanner actif - Pointez vers un QR code</span>
                     ) : (
                       <span className="text-muted-foreground">📱 Scanner prêt</span>
                     )}
@@ -373,7 +403,7 @@ export default function ScanEntry() {
                     <Button
                       onClick={toggleManualInput}
                       variant="outline"
-                      className="w-full h-12 rounded-2xl border-modern-violet-200 text-modern-violet-700 hover:bg-modern-violet-50"
+                      className="w-full h-12 rounded-2xl border-blue-200 text-blue-700 hover:bg-blue-50"
                       disabled={processingRef.current || isScanning}
                     >
                       <Type className="w-5 h-5 mr-2" />
@@ -399,7 +429,7 @@ export default function ScanEntry() {
                     <Button
                       onClick={cancelManualInput}
                       variant="outline"
-                      className="h-12 border-modern-violet-200 text-modern-violet-700 hover:bg-modern-violet-50"
+                      className="h-12 border-blue-200 text-blue-700 hover:bg-blue-50"
                       disabled={processingRef.current}
                     >
                       Annuler
@@ -423,4 +453,4 @@ export default function ScanEntry() {
       </div>
     </EntryRoute>
   );
-}
+} 

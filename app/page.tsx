@@ -21,7 +21,7 @@ export default function HomePage() {
         } else if (isExitUser) {
           redirectPath = '/scan-exit';
         } else if (isReentryUser) {
-          redirectPath = '/scan-exit'; // Pour les ré-entrées, on utilise la page de sortie
+          redirectPath = '/scan-reentry';
         }
         window.location.href = redirectPath;
       }

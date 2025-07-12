@@ -14,9 +14,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!['ENTER', 'EXIT'].includes(action)) {
+    if (!['ENTER', 'EXIT', 'REENTER'].includes(action)) {
       return NextResponse.json(
-        { error: 'Action invalide. Utilisez ENTER ou EXIT.' },
+        { error: 'Action invalide. Utilisez ENTER, EXIT ou REENTER.' },
         { status: 400 }
       );
     }
@@ -72,8 +72,8 @@ export async function POST(request: NextRequest) {
           data: {
             ticketId: ticket.id,
             eventId: ticket.eventId,
-            action: 'ENTER',
-            vendeurId: userId,
+            action: 'ENTER', // On enregistre comme une entrée
+            ...(userId ? { vendeurId: userId } : {}),
           },
         }),
       ]);
@@ -124,7 +124,7 @@ export async function POST(request: NextRequest) {
             ticketId: ticket.id,
             eventId: ticket.eventId,
             action: 'EXIT',
-            vendeurId: userId,
+            ...(userId ? { vendeurId: userId } : {}),
           },
         }),
       ]);
@@ -136,6 +136,56 @@ export async function POST(request: NextRequest) {
           number: ticket.number,
           status: 'EXITED',
         },
+      });
+    } else if (action === 'REENTER') {
+      // Gestion spéciale pour la ré-entrée
+      // 1. Vérifier qu'il y a au moins une action EXIT dans l'historique
+      const hasExited = ticket.scanHistory.some((h) => h.action === 'EXIT');
+      if (!hasExited) {
+        return NextResponse.json(
+          { error: "Ce ticket n'a jamais été sorti. Ré-entrée refusée." },
+          { status: 400 }
+        );
+      }
+      // 2. Refuser si le ticket est déjà entré
+      if (ticket.status === 'ENTERED') {
+        return NextResponse.json(
+          { error: 'Ce ticket est déjà entré.' },
+          { status: 400 }
+        );
+      }
+      // 3. Valider la ré-entrée
+      await prisma.$transaction([
+        prisma.ticket.update({
+          where: { id: ticket.id },
+          data: {
+            status: 'ENTERED',
+            scannedAt: new Date(),
+            entryType: entryType as 'SCAN' | 'MANUAL',
+          },
+        }),
+        prisma.scanHistory.create({
+          data: {
+            ticketId: ticket.id,
+            eventId: ticket.eventId,
+            action: 'ENTER', // On enregistre comme une entrée
+            ...(userId ? { vendeurId: userId } : {}),
+          },
+        }),
+      ]);
+      // Récupérer l'historique mis à jour
+      const updatedHistory = await prisma.scanHistory.findMany({
+        where: { ticketId: ticket.id },
+        orderBy: { scannedAt: 'desc' },
+      });
+      return NextResponse.json({
+        success: true,
+        message: 'Ticket validé pour ré-entrée.',
+        ticket: {
+          number: ticket.number,
+          status: 'ENTERED',
+        },
+        ticketHistory: updatedHistory,
       });
     }
 

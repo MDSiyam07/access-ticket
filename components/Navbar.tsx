@@ -88,6 +88,7 @@ export default function Navbar({ children }: NavbarProps) {
         { name: 'Scan Entrée', href: '/scan-entry', icon: LogIn },
         { name: 'Scan Sortie', href: '/scan-exit', icon: LogOut },
         { name: 'Scan Vente', href: '/scan-selling', icon: ScanLine },
+        { name: 'Scan Re-Entrée', href: '/scan-reentry', icon: LogIn },
         { name: 'Historique', href: '/history', icon: History },
         { name: 'Saisie Manuelle', href: '/manual-entry', icon: Edit3 },
         { name: 'Gestion administrateur', href: '/admin', icon: Settings },
@@ -113,8 +114,7 @@ export default function Navbar({ children }: NavbarProps) {
     } else if (isReentryUser) {
       return [
         { name: 'Statistiques', href: '/dashboard', icon: BarChart3 },
-        { name: 'Scan Re-Entrée', href: '/scan-entry', icon: LogIn },
-        { name: 'Saisie Manuelle', href: '/manual-entry', icon: Edit3 },
+        { name: 'Scan Re-Entrée', href: '/scan-reentry', icon: LogIn },
       ];
     }
 
