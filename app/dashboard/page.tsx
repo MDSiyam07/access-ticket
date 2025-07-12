@@ -119,7 +119,7 @@ export default function Dashboard() {
           totalTickets: statsData.total,
           scannedIn: statsData.entered,
           scannedOut: statsData.exited,
-          currentlyInside: statsData.vendus - statsData.entered, // Personnes en route (vendus - entrées)
+          currentlyInside: Math.max(0, statsData.vendus - statsData.entered), // Personnes en route (vendus - entrées)
           pending: statsData.pending,
           vendus: statsData.vendus
         });

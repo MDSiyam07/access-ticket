@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
     const entered = await prisma.ticket.count({
       where: { 
         eventId: eventId,
-        status: { in: ['ENTERED', 'EXITED'] }
+        status: 'ENTERED'
       },
     });
 
