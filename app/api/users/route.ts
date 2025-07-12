@@ -5,15 +5,22 @@ import bcrypt from 'bcryptjs';
 const prisma = new PrismaClient();
 
 // GET - Lister tous les utilisateurs
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    const { searchParams } = new URL(request.url);
+    const eventId = searchParams.get('eventId');
+
+    const whereClause = eventId ? { eventId } : {};
+
     const users = await prisma.user.findMany({
+      where: whereClause,
       select: {
         id: true,
         email: true,
         name: true,
         role: true,
         createdAt: true,
+        eventId: true,
         // Ne pas inclure le mot de passe pour la sécurité
       },
       orderBy: {
@@ -34,7 +41,9 @@ export async function GET() {
 // POST - Créer un nouvel utilisateur
 export async function POST(request: NextRequest) {
   try {
-    const { email, password, name, role } = await request.json();
+    const { email, password, name, role, eventId } = await request.json();
+    
+
 
     // Validation des données
     if (!email || !password || !name || !role) {
@@ -86,12 +95,14 @@ export async function POST(request: NextRequest) {
     const hashedPassword = await bcrypt.hash(password, 12);
 
     // Créer l'utilisateur
+
     const newUser = await prisma.user.create({
       data: {
         email,
         password: hashedPassword,
         name,
         role,
+        eventId: eventId || null,
       },
       select: {
         id: true,
@@ -99,8 +110,11 @@ export async function POST(request: NextRequest) {
         name: true,
         role: true,
         createdAt: true,
+        eventId: true,
       },
     });
+    
+
 
     return NextResponse.json({
       success: true,

@@ -21,6 +21,7 @@ interface User {
   email: string;
   role: string;
   createdAt: string;
+  eventId?: string;
 }
 
 // roleIcons removed as it's not used
@@ -44,12 +45,16 @@ const roleLabels = {
 export default function EventUsersPage() {
   const { user, isAuthenticated, isLoading } = useAuth();
   const router = useRouter();
-  const { eventId } = useParams();
+  // const { eventId } = useParams();
+  
+  const params = useParams();
+  const eventId = params.eventId;
   const [event, setEvent] = useState<Event | null>(null);
   const [users, setUsers] = useState<User[]>([]);
   const [isLoadingEvent, setIsLoadingEvent] = useState(true);
   const [isLoadingUsers, setIsLoadingUsers] = useState(true);
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [editingUser, setEditingUser] = useState<User | null>(null);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -92,7 +97,7 @@ export default function EventUsersPage() {
   useEffect(() => {
     const fetchUsers = async () => {
       try {
-        const response = await fetch('/api/users');
+        const response = await fetch(`/api/users?eventId=${eventId}`);
         if (response.ok) {
           const data = await response.json();
           setUsers(data);
@@ -104,10 +109,10 @@ export default function EventUsersPage() {
       }
     };
 
-    if (isAuthenticated) {
+    if (isAuthenticated && eventId) {
       fetchUsers();
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, eventId]);
 
   if (isLoading || isLoadingEvent) {
     return (
@@ -243,24 +248,64 @@ export default function EventUsersPage() {
             {/* Formulaire de création */}
             {showCreateForm && (
               <div className="mb-6 p-4 bg-gray-50 rounded-lg border-l-4 border-blue-500">
-                <h3 className="text-lg font-medium text-gray-900 mb-4">Créer un nouvel utilisateur</h3>
+                <h3 className="text-lg font-medium text-gray-900 mb-4">
+                  {editingUser ? 'Modifier l\'utilisateur' : 'Créer un nouvel utilisateur'}
+                </h3>
                 <form onSubmit={async (e) => {
                   e.preventDefault();
                   try {
-                    const response = await fetch('/api/users', {
-                      method: 'POST',
+                    const url = editingUser 
+                      ? `/api/users/${editingUser.id}`
+                      : '/api/users';
+                    
+                    const method = editingUser ? 'PUT' : 'POST';
+                    
+                    const body = editingUser 
+                      ? { ...formData } // Pour la modification, pas besoin d'eventId
+                      : { ...formData, eventId: eventId }; // Pour la création
+                    
+
+                    
+                    const response = await fetch(url, {
+                      method,
                       headers: {
                         'Content-Type': 'application/json',
                       },
-                      body: JSON.stringify(formData),
+                      body: JSON.stringify(body),
                     });
 
                     if (response.ok) {
-                      const newUser = await response.json();
-                      setUsers([newUser, ...users]);
+                      const result = await response.json();
+                      const newUser = result.user; // L'API retourne { success: true, user: newUser, message: '...' }
+                      
+                      if (editingUser) {
+                        // Modification
+                        setUsers(users.map(u => u.id === editingUser.id ? newUser : u));
+                        setEditingUser(null);
+                      } else {
+                        // Création - vérifier que l'utilisateur a un ID
+                        if (newUser && newUser.id) {
+                          // Vérifier que l'utilisateur n'existe pas déjà dans la liste
+                          const userExists = users.some(u => u.id === newUser.id);
+                          if (!userExists) {
+                            setUsers([newUser, ...users]);
+                          } else {
+                            console.log('Utilisateur déjà présent dans la liste');
+                          }
+                        } else {
+                          console.error('Utilisateur créé sans ID:', newUser);
+                          // Recharger la liste complète en cas de problème
+                          const response = await fetch(`/api/users?eventId=${eventId}`);
+                          if (response.ok) {
+                            const data = await response.json();
+                            setUsers(data);
+                          }
+                        }
+                      }
+                      
                       setShowCreateForm(false);
                       setFormData({ name: '', email: '', password: '', role: 'ENTRY' });
-                      alert('Utilisateur créé avec succès !');
+                      alert(editingUser ? 'Utilisateur modifié avec succès !' : 'Utilisateur créé avec succès !');
                     } else {
                       const error = await response.json();
                       alert(`Erreur lors de la création : ${error.error}`);
@@ -336,22 +381,23 @@ export default function EventUsersPage() {
                   </div>
 
                   <div className="flex gap-3">
-                    <button
-                      type="submit"
-                      className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors"
-                    >
-                      Créer l&apos;utilisateur
-                    </button>
+                                          <button
+                        type="submit"
+                        className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors"
+                      >
+                        {editingUser ? 'Modifier l\'utilisateur' : 'Créer l\'utilisateur'}
+                      </button>
                     <button
                       type="button"
                       onClick={() => {
                         setShowCreateForm(false);
-                                              setFormData({ name: '', email: '', password: '', role: 'ENTRY' });
-                    }}
-                    className="bg-gray-300 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-400 transition-colors"
-                  >
-                    Annuler
-                  </button>
+                        setEditingUser(null);
+                        setFormData({ name: '', email: '', password: '', role: 'ENTRY' });
+                      }}
+                      className="bg-gray-300 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-400 transition-colors"
+                    >
+                      Annuler
+                    </button>
                   </div>
                 </form>
               </div>
@@ -363,47 +409,59 @@ export default function EventUsersPage() {
               </div>
             ) : (
               <div className="space-y-4">
-                {users.map((user) => (
-                  <div key={user.id} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
-                    <div className="flex-1">
-                      <h3 className="font-medium text-gray-900">{user.name}</h3>
-                      <p className="text-sm text-gray-600">{user.email}</p>
-                      <p className="text-xs text-gray-500">
-                        Créé le {new Date(user.createdAt).toLocaleDateString()}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                        roleColors[user.role as keyof typeof roleColors] || 'bg-gray-100 text-gray-800'
-                      }`}>
-                        {roleLabels[user.role as keyof typeof roleLabels] || user.role}
-                      </span>
-                      <button className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors">
-                        Modifier
-                      </button>
-                      <button
-                        className="p-2 text-red-600 hover:bg-red-50 rounded-md transition-colors"
-                        title="Supprimer l'utilisateur"
-                        onClick={async () => {
-                          if (!confirm('Êtes-vous sûr de vouloir supprimer cet utilisateur ?')) return;
-                          try {
-                            const response = await fetch(`/api/users/${user.id}`, { method: 'DELETE' });
-                            if (response.ok) {
-                              setUsers(users.filter(u => u.id !== user.id));
-                            } else {
-                              const error = await response.json();
-                              alert(error.error || 'Erreur lors de la suppression');
+                {users.filter(user => user && user.id).map((user) => (
+                    <div key={user.id} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
+                      <div className="flex-1">
+                        <h3 className="font-medium text-gray-900">{user.name}</h3>
+                        <p className="text-sm text-gray-600">{user.email}</p>
+                        <p className="text-xs text-gray-500">
+                          Créé le {user.createdAt ? new Date(user.createdAt).toLocaleDateString('fr-FR') : 'Date inconnue'}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                          roleColors[user.role as keyof typeof roleColors] || 'bg-gray-100 text-gray-800'
+                        }`}>
+                          {roleLabels[user.role as keyof typeof roleLabels] || user.role}
+                        </span>
+                        <button 
+                          className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
+                          onClick={() => {
+                            setEditingUser(user);
+                            setFormData({
+                              name: user.name,
+                              email: user.email,
+                              password: '',
+                              role: user.role
+                            });
+                            setShowCreateForm(true);
+                          }}
+                        >
+                          Modifier
+                        </button>
+                        <button
+                          className="p-2 text-red-600 hover:bg-red-50 rounded-md transition-colors"
+                          title="Supprimer l'utilisateur"
+                          onClick={async () => {
+                            if (!confirm('Êtes-vous sûr de vouloir supprimer cet utilisateur ?')) return;
+                            try {
+                              const response = await fetch(`/api/users/${user.id}`, { method: 'DELETE' });
+                              if (response.ok) {
+                                setUsers(users.filter(u => u.id !== user.id));
+                              } else {
+                                const error = await response.json();
+                                alert(error.error || 'Erreur lors de la suppression');
+                              }
+                            } catch {
+                              alert('Erreur lors de la suppression');
                             }
-                          } catch {
-                            alert('Erreur lors de la suppression');
-                          }
-                        }}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                          }}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
                 
                 {users.length === 0 && (
                   <div className="text-center py-8 text-gray-500">

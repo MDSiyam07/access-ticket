@@ -6,6 +6,7 @@ import { Users, UserCheck, UserX, Clock, TrendingUp, Shield, User, ShoppingCart,
 import { useAuth } from '../contexts/AuthContext';
 import Link from 'next/link';
 
+
 interface Event {
   id: string;
   name: string;
@@ -49,6 +50,7 @@ interface Activity {
 
 export default function Dashboard() {
   const { isAdmin } = useAuth();
+
   const [selectedEventId, setSelectedEventId] = useState<string>('');
   const [events, setEvents] = useState<Event[]>([]);
   const [stats, setStats] = useState<Stats>({
