@@ -15,32 +15,31 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Récupérer le nombre d'utilisateurs pour cet événement
-    const onlineUsers = await prisma.user.count({
-      where: {
-        eventId: eventId,
-        // On pourrait ajouter un champ lastSeen pour détecter les utilisateurs vraiment actifs
-        // pour l'instant on compte tous les utilisateurs de l'événement
-      },
-    });
+    // Récupérer le nombre d'utilisateurs pour cet événement via la relation many-to-many
+    const onlineUsersResult = await prisma.$queryRaw<[{ count: bigint }]>`
+      SELECT COUNT(*) as count
+      FROM "User" u
+      INNER JOIN "EventUser" eu ON u.id = eu."userId"
+      WHERE eu."eventId" = ${eventId}
+    `;
+
+    const onlineUsers = Number(onlineUsersResult[0].count);
 
     // Récupérer aussi les utilisateurs par rôle pour plus de détails
-    const usersByRole = await prisma.user.groupBy({
-      by: ['role'],
-      where: {
-        eventId: eventId,
-      },
-      _count: {
-        role: true,
-      },
-    });
+    const usersByRole = await prisma.$queryRaw<[{ role: string; count: bigint }]>`
+      SELECT u.role, COUNT(*) as count
+      FROM "User" u
+      INNER JOIN "EventUser" eu ON u.id = eu."userId"
+      WHERE eu."eventId" = ${eventId}
+      GROUP BY u.role
+    `;
 
     return NextResponse.json({
       success: true,
       onlineUsers,
       usersByRole: usersByRole.map(group => ({
         role: group.role,
-        count: group._count.role,
+        count: Number(group.count),
       })),
     });
 

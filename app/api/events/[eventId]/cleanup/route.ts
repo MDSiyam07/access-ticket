@@ -21,17 +21,24 @@ export async function POST(
     }
 
     // Vérifier s'il y a des tickets ou utilisateurs liés
-    const eventWithCounts = await prisma.event.findUnique({
-      where: { id: eventId },
-      include: {
-        _count: {
-          select: {
-            tickets: true,
-            users: true,
-          },
-        },
+    const [ticketCount, userCount] = await Promise.all([
+      prisma.ticket.count({
+        where: { eventId: eventId },
+      }),
+      prisma.$queryRaw<[{ count: bigint }]>`
+        SELECT COUNT(*) as count
+        FROM "EventUser"
+        WHERE "eventId" = ${eventId}
+      `,
+    ]);
+
+    const eventWithCounts = {
+      id: eventId,
+      _count: {
+        tickets: ticketCount,
+        users: Number(userCount[0].count),
       },
-    });
+    };
 
     if (!eventWithCounts) {
       return NextResponse.json(
@@ -59,6 +66,13 @@ export async function POST(
     });
     console.log('Tickets supprimés:', deletedTickets);
 
+    // Supprimer les liens EventUser (mais pas les utilisateurs eux-mêmes)
+    await prisma.$executeRaw`
+      DELETE FROM "EventUser"
+      WHERE "eventId" = ${eventId}
+    `;
+    console.log('Liens EventUser supprimés');
+
     // Supprimer l'événement
     await prisma.event.delete({ where: { id: eventId } });
     console.log('Événement supprimé');
@@ -69,7 +83,7 @@ export async function POST(
     });
 
   } catch (error) {
-    console.error('Erreur lors du nettoyage de l\'événement:', error);
+    console.error('Erreur lors de la suppression de l\'événement:', error);
     return NextResponse.json(
       { error: 'Erreur interne du serveur' },
       { status: 500 }

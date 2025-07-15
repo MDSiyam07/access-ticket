@@ -7,7 +7,8 @@
     "build": "prisma generate && next build",
     "start": "next start",
     "lint": "next lint",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate",
+    "migrate-users": "node scripts/migrate-users-to-event.js"
   },
   "dependencies": {
     "@ducanh2912/next-pwa": "^10.2.9",

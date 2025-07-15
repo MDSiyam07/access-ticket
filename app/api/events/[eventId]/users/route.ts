@@ -11,21 +11,13 @@ export async function GET(
   try {
     const { eventId } = await params;
 
-    const users = await prisma.user.findMany({
-      where: {
-        eventId: eventId,
-      },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        role: true,
-        createdAt: true,
-      },
-      orderBy: {
-        createdAt: 'asc',
-      },
-    });
+    const users = await prisma.$queryRaw`
+      SELECT u.id, u.name, u.email, u.role, u."createdAt"
+      FROM "User" u
+      INNER JOIN "EventUser" eu ON u.id = eu."userId"
+      WHERE eu."eventId" = ${eventId}
+      ORDER BY u."createdAt" ASC
+    `;
 
     return NextResponse.json(users);
   } catch (error) {

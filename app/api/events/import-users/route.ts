@@ -1,8 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
-import bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
+
+interface SourceUser {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+}
+
+interface CountResult {
+  count: number;
+}
 
 // POST - Importer les utilisateurs d'un événement vers un autre
 export async function POST(request: NextRequest) {
@@ -32,17 +42,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Récupérer les utilisateurs de l'événement source
-    const sourceUsers = await prisma.user.findMany({
-      where: {
-        eventId: sourceEventId,
-      },
-      select: {
-        name: true,
-        email: true,
-        role: true,
-      },
-    });
+    // Récupérer les utilisateurs de l'événement source via SQL direct
+    const sourceUsers = await prisma.$queryRaw<SourceUser[]>`
+      SELECT u.id, u.name, u.email, u.role
+      FROM "User" u
+      INNER JOIN "EventUser" eu ON u.id = eu."userId"
+      WHERE eu."eventId" = ${sourceEventId}
+    `;
 
     if (sourceUsers.length === 0) {
       return NextResponse.json(
@@ -51,70 +57,39 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Créer les nouveaux utilisateurs pour l'événement cible
     const importedUsers = [];
     const errors = [];
 
     for (const user of sourceUsers) {
       try {
-        // Vérifier si l'utilisateur existe déjà globalement
-        const existingUser = await prisma.user.findUnique({
-          where: {
-            email: user.email,
-          },
-        });
-
-        if (existingUser) {
-          // Si l'utilisateur existe déjà, on l'associe simplement à l'événement cible
-          if (existingUser.eventId === targetEventId) {
-            errors.push(`L'utilisateur ${user.email} existe déjà dans l'événement cible`);
-            continue;
-          } else {
-            // Mettre à jour l'événement de l'utilisateur existant
-            await prisma.user.update({
-              where: { id: existingUser.id },
-              data: { eventId: targetEventId },
-            });
-            
-            importedUsers.push({
-              id: existingUser.id,
-              name: existingUser.name,
-              email: existingUser.email,
-              role: existingUser.role,
-              tempPassword: 'Utilisateur existant',
-            });
-            continue;
-          }
+        // Vérifier si l'utilisateur existe déjà dans l'événement cible
+        const alreadyLinked = await prisma.$queryRaw<CountResult[]>`
+          SELECT COUNT(*) as count
+          FROM "EventUser"
+          WHERE "userId" = ${user.id} AND "eventId" = ${targetEventId}
+        `;
+        
+        if (alreadyLinked[0].count > 0) {
+          errors.push(`L'utilisateur ${user.email} existe déjà dans l'événement cible`);
+          continue;
         }
 
-        // Générer un mot de passe temporaire
-        const tempPassword = Math.random().toString(36).slice(-8);
-        const hashedPassword = await bcrypt.hash(tempPassword, 12);
-
-        // Créer le nouvel utilisateur
-        const newUser = await prisma.user.create({
-          data: {
-            name: user.name,
-            email: user.email,
-            password: hashedPassword,
-            role: user.role,
-            eventId: targetEventId,
-          },
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            role: true,
-          },
-        });
-
+        // Créer le lien EventUser pour associer l'utilisateur à l'événement cible
+        await prisma.$executeRaw`
+          INSERT INTO "EventUser" ("id", "userId", "eventId", "createdAt")
+          VALUES (gen_random_uuid(), ${user.id}, ${targetEventId}, NOW())
+        `;
+        
         importedUsers.push({
-          ...newUser,
-          tempPassword, // Inclure le mot de passe temporaire pour l'affichage
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+          tempPassword: 'Utilisateur existant',
         });
       } catch (error) {
-        console.error(`Erreur lors de la création de l'utilisateur ${user.email}:`, error);
-        errors.push(`Erreur lors de la création de l'utilisateur ${user.email}`);
+        console.error(`Erreur lors de l'association de l'utilisateur ${user.email}:`, error);
+        errors.push(`Erreur lors de l'association de l'utilisateur ${user.email}`);
       }
     }
 

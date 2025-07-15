@@ -15,36 +15,29 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Récupérer les utilisateurs vendeurs de l'événement
-    const vendors = await prisma.user.findMany({
-      where: {
-        eventId: eventId,
-        role: 'VENDEUR',
-      },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        role: true,
-      },
-    });
+    // Récupérer les utilisateurs vendeurs de l'événement via la relation many-to-many
+    const vendors = await prisma.$queryRaw<[{ id: string; name: string; email: string; role: string }]>`
+      SELECT u.id, u.name, u.email, u.role
+      FROM "User" u
+      INNER JOIN "EventUser" eu ON u.id = eu."userId"
+      WHERE eu."eventId" = ${eventId} AND u.role = 'VENDEUR'
+    `;
 
-    // Récupérer les statistiques de ventes par vendeur
-    const salesByVendor = await prisma.scanHistory.groupBy({
-      by: ['vendeurId'],
-      where: {
-        eventId: eventId,
-        action: 'SOLD',
-        vendeurId: { not: null },
-      },
-      _count: { _all: true },
-    });
+    // Récupérer les statistiques de ventes par vendeur via SQL direct
+    const salesByVendor = await prisma.$queryRaw<[{ vendeurId: string; count: bigint }]>`
+      SELECT sh."vendeurId", COUNT(*) as count
+      FROM "ScanHistory" sh
+      WHERE sh."eventId" = ${eventId} 
+        AND sh.action = 'SOLD' 
+        AND sh."vendeurId" IS NOT NULL
+      GROUP BY sh."vendeurId"
+    `;
 
     // Créer un map des ventes par vendeur
     const salesMap = new Map<string, number>();
     salesByVendor.forEach(sale => {
-      if (sale.vendeurId && sale._count && typeof sale._count._all === 'number') {
-        salesMap.set(sale.vendeurId, sale._count._all);
+      if (sale.vendeurId) {
+        salesMap.set(sale.vendeurId, Number(sale.count));
       }
     });
 

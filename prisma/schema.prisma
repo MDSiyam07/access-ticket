@@ -19,7 +19,7 @@ model Event {
 
   // Relations
   tickets     Ticket[]
-  users       User[]
+  eventUsers  EventUser[]
   scanHistory ScanHistory[]
 }
 
@@ -31,12 +31,25 @@ model User {
   name      String
   role      UserRole @default(ENTRY)
 
-  // Relation avec Event
-  eventId String?
-  event   Event?  @relation(fields: [eventId], references: [id])
+  // Relation many-to-many avec Event via EventUser
+  eventUsers EventUser[]
 
   // Relation avec les scans effectués par cet utilisateur
   scans ScanHistory[] @relation("UserScans")
+}
+
+// Table de jointure pour la relation many-to-many entre User et Event
+model EventUser {
+  id      String @id @default(cuid())
+  userId  String
+  eventId String
+  createdAt DateTime @default(now())
+
+  // Relations
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, eventId])
 }
 
 model Ticket {

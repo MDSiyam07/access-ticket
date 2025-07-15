@@ -10,25 +10,32 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const eventId = searchParams.get('eventId');
 
-    const whereClause = eventId ? { eventId } : {};
-
-    const users = await prisma.user.findMany({
-      where: whereClause,
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        role: true,
-        createdAt: true,
-        eventId: true,
-        // Ne pas inclure le mot de passe pour la sécurité
-      },
-      orderBy: {
-        createdAt: 'desc',
-      },
-    });
-
-    return NextResponse.json(users);
+    if (eventId) {
+      // Utiliser SQL direct pour la relation many-to-many
+      const users = await prisma.$queryRaw`
+        SELECT u.id, u.email, u.name, u.role, u."createdAt"
+        FROM "User" u
+        INNER JOIN "EventUser" eu ON u.id = eu."userId"
+        WHERE eu."eventId" = ${eventId}
+        ORDER BY u."createdAt" DESC
+      `;
+      return NextResponse.json(users);
+    } else {
+      // Tous les utilisateurs
+      const users = await prisma.user.findMany({
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          role: true,
+          createdAt: true,
+        },
+        orderBy: {
+          createdAt: 'desc',
+        },
+      });
+      return NextResponse.json(users);
+    }
   } catch (error) {
     console.error('Erreur lors de la récupération des utilisateurs:', error);
     return NextResponse.json(
@@ -94,33 +101,59 @@ export async function POST(request: NextRequest) {
     // Hasher le mot de passe
     const hashedPassword = await bcrypt.hash(password, 12);
 
-    // Créer l'utilisateur
+    // Créer l'utilisateur avec la relation many-to-many si eventId est fourni
+    if (eventId) {
+      const newUser = await prisma.user.create({
+        data: {
+          email,
+          password: hashedPassword,
+          name,
+          role,
+        },
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          role: true,
+          createdAt: true,
+        },
+      });
 
-    const newUser = await prisma.user.create({
-      data: {
-        email,
-        password: hashedPassword,
-        name,
-        role,
-        eventId: eventId || null,
-      },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        role: true,
-        createdAt: true,
-        eventId: true,
-      },
-    });
-    
+      // Créer le lien EventUser
+      await prisma.$executeRaw`
+        INSERT INTO "EventUser" ("id", "userId", "eventId", "createdAt")
+        VALUES (gen_random_uuid(), ${newUser.id}, ${eventId}, NOW())
+      `;
 
+      return NextResponse.json({
+        success: true,
+        user: newUser,
+        message: 'Utilisateur créé avec succès',
+      });
+    } else {
+      // Créer l'utilisateur sans événement
+      const newUser = await prisma.user.create({
+        data: {
+          email,
+          password: hashedPassword,
+          name,
+          role,
+        },
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          role: true,
+          createdAt: true,
+        },
+      });
 
-    return NextResponse.json({
-      success: true,
-      user: newUser,
-      message: 'Utilisateur créé avec succès',
-    });
+      return NextResponse.json({
+        success: true,
+        user: newUser,
+        message: 'Utilisateur créé avec succès',
+      });
+    }
 
   } catch (error) {
     console.error('Erreur lors de la création de l\'utilisateur:', error);

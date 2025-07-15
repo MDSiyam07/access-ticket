@@ -4,7 +4,7 @@ import { useAuth } from '../../../../contexts/AuthContext';
 import { useRouter, useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import AdminRoute from '../../../../../components/AdminRoute';
-import { Shield, ArrowLeft, Users, UserPlus, UserCheck, UserX, Plus, Trash2 } from 'lucide-react';
+import { Shield, ArrowLeft, Users, UserPlus, UserCheck, UserX, Plus, Trash2, Copy } from 'lucide-react';
 import LoadingSpinner from '../../../../../components/LoadingSpinner';
 
 interface Event {
@@ -62,6 +62,12 @@ export default function EventUsersPage() {
     role: 'ENTRY'
   });
 
+  // États pour l'import d'utilisateurs
+  const [showImportUsers, setShowImportUsers] = useState(false);
+  const [selectedSourceEvent, setSelectedSourceEvent] = useState<string>('');
+  const [isImporting, setIsImporting] = useState(false);
+  const [events, setEvents] = useState<Event[]>([]);
+
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
       router.push('/login');
@@ -113,6 +119,67 @@ export default function EventUsersPage() {
       fetchUsers();
     }
   }, [isAuthenticated, eventId]);
+
+  // Fonction pour récupérer la liste des événements
+  const fetchEvents = async () => {
+    try {
+      const response = await fetch('/api/events');
+      if (response.ok) {
+        const data = await response.json();
+        setEvents(data);
+      }
+    } catch (error) {
+      console.error('Erreur lors du chargement des événements:', error);
+    }
+  };
+
+  // Fonction pour importer les utilisateurs
+  const handleImportUsers = async () => {
+    if (!selectedSourceEvent || !eventId) return;
+
+    setIsImporting(true);
+
+    try {
+      const response = await fetch('/api/events/import-users', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          sourceEventId: selectedSourceEvent,
+          targetEventId: eventId,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        alert(`Import réussi ! ${result.message}`);
+        setShowImportUsers(false);
+        setSelectedSourceEvent('');
+        // Recharger la liste des utilisateurs
+        const usersResponse = await fetch(`/api/users?eventId=${eventId}`);
+        if (usersResponse.ok) {
+          const usersData = await usersResponse.json();
+          setUsers(usersData);
+        }
+      } else {
+        alert(`Erreur lors de l&apos;import : ${result.error}`);
+      }
+    } catch (error) {
+      console.error('Erreur lors de l&apos;import des utilisateurs:', error);
+      alert('Erreur lors de l&apos;import des utilisateurs');
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
+  // Charger les événements au montage du composant
+  useEffect(() => {
+    if (isAuthenticated) {
+      fetchEvents();
+    }
+  }, [isAuthenticated]);
 
   if (isLoading || isLoadingEvent) {
     return (
@@ -236,13 +303,26 @@ export default function EventUsersPage() {
                   Gérez les accès et permissions des utilisateurs pour cet événement.
                 </p>
               </div>
-              <button
-                onClick={() => setShowCreateForm(!showCreateForm)}
-                className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
-              >
-                <Plus className="w-4 h-4" />
-                Nouvel Utilisateur
-              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setShowCreateForm(!showCreateForm)}
+                  className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  <Plus className="w-4 h-4" />
+                  Nouvel Utilisateur
+                </button>
+                
+                {/* Bouton d'import d'utilisateurs */}
+                {events.length > 1 && (
+                  <button
+                    onClick={() => setShowImportUsers(!showImportUsers)}
+                    className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors"
+                  >
+                    <Copy className="w-4 h-4" />
+                    Importer des utilisateurs
+                  </button>
+                )}
+              </div>
             </div>
 
             {/* Formulaire de création */}
@@ -400,6 +480,53 @@ export default function EventUsersPage() {
                     </button>
                   </div>
                 </form>
+              </div>
+            )}
+
+            {/* Interface d'import d'utilisateurs */}
+            {showImportUsers && (
+              <div className="mb-6 p-4 bg-green-50 rounded-lg border-l-4 border-green-500">
+                <h3 className="text-lg font-medium text-gray-900 mb-4">
+                  Importer les utilisateurs d&apos;un autre événement
+                </h3>
+                <div className="mb-3">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Sélectionner l&apos;événement source :
+                  </label>
+                  <select
+                    value={selectedSourceEvent}
+                    onChange={(e) => setSelectedSourceEvent(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                  >
+                    <option value="">Choisir un événement&hellip;</option>
+                    {events.filter(e => e.id !== eventId).map((event) => (
+                      <option key={event.id} value={event.id}>
+                        {event.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                
+                {selectedSourceEvent && (
+                  <div className="flex gap-2">
+                    <button
+                      onClick={handleImportUsers}
+                      disabled={isImporting}
+                      className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 disabled:opacity-50 transition-colors"
+                    >
+                      {isImporting ? 'Import en cours...' : 'Importer les utilisateurs'}
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowImportUsers(false);
+                        setSelectedSourceEvent('');
+                      }}
+                      className="bg-gray-300 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-400 transition-colors"
+                    >
+                      Annuler
+                    </button>
+                  </div>
+                )}
               </div>
             )}
 

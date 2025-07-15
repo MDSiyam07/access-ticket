@@ -8,17 +8,33 @@ export async function GET() {
   try {
     const events = await prisma.event.findMany({
       orderBy: { createdAt: 'desc' },
-      include: {
-        _count: {
-          select: {
-            tickets: true,
-            users: true,
-          },
-        },
-      },
     });
 
-    return NextResponse.json(events);
+    // Récupérer les comptes pour chaque événement
+    const eventsWithCounts = await Promise.all(
+      events.map(async (event) => {
+        const [ticketCount, userCount] = await Promise.all([
+          prisma.ticket.count({
+            where: { eventId: event.id },
+          }),
+          prisma.$queryRaw<[{ count: bigint }]>`
+            SELECT COUNT(*) as count
+            FROM "EventUser"
+            WHERE "eventId" = ${event.id}
+          `,
+        ]);
+
+        return {
+          ...event,
+          _count: {
+            tickets: ticketCount,
+            users: Number(userCount[0].count),
+          },
+        };
+      })
+    );
+
+    return NextResponse.json(eventsWithCounts);
   } catch (error) {
     console.error('Erreur lors de la récupération des événements:', error);
     return NextResponse.json(
@@ -107,24 +123,24 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Vérifier s'il y a des tickets ou utilisateurs liés
-    const eventWithCounts = await prisma.event.findUnique({
-      where: { id },
-      include: {
-        _count: {
-          select: {
-            tickets: true,
-            users: true,
-          },
-        },
-      },
-    });
+    const [ticketCount, userCount] = await Promise.all([
+      prisma.ticket.count({
+        where: { eventId: id },
+      }),
+      prisma.$queryRaw<[{ count: bigint }]>`
+        SELECT COUNT(*) as count
+        FROM "EventUser"
+        WHERE "eventId" = ${id}
+      `,
+    ]);
 
-    if (!eventWithCounts) {
-      return NextResponse.json(
-        { error: 'Événement non trouvé' },
-        { status: 404 }
-      );
-    }
+    const eventWithCounts = {
+      id,
+      _count: {
+        tickets: ticketCount,
+        users: Number(userCount[0].count),
+      },
+    };
 
     console.log('Événement trouvé:', eventWithCounts);
 
@@ -147,6 +163,13 @@ export async function DELETE(request: NextRequest) {
         where: { eventId: id }
       });
       console.log('Tickets supprimés:', deletedTickets);
+
+      // Supprimer les liens EventUser (mais pas les utilisateurs eux-mêmes)
+      await prisma.$executeRaw`
+        DELETE FROM "EventUser"
+        WHERE "eventId" = ${id}
+      `;
+      console.log('Liens EventUser supprimés');
 
       // Supprimer l'événement
       await prisma.event.delete({ where: { id } });
