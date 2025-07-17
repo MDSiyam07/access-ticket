@@ -5,8 +5,9 @@ import { useRouter, useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import TicketImport from '../../../../components/TicketImport';
 import ImportStats from '../../../../components/ImportStats';
+import TicketSearch from '../../../../components/TicketSearch';
 import AdminRoute from '../../../../components/AdminRoute';
-import { Shield, ArrowLeft, FileText, BarChart3, Users } from 'lucide-react';
+import { Shield, ArrowLeft, FileText, BarChart3, Users, Search } from 'lucide-react';
 import LoadingSpinner from '../../../../components/LoadingSpinner';
 
 interface Event {
@@ -121,7 +122,7 @@ export default function EventManagementPage() {
           </div>
 
           {/* Grille des fonctionnalités pour cet événement */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
             <div className="bg-white rounded-lg shadow-lg p-6 border-l-4 border-blue-500">
               <div className="flex items-center mb-4">
                 <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center mr-3">
@@ -144,33 +145,18 @@ export default function EventManagementPage() {
               <p className="text-gray-600 text-sm mb-4">
                 Visualisez les statistiques détaillées pour cet événement
               </p>
-              {/* <button
-                onClick={async () => {
-                  try {
-                    const response = await fetch(`/api/events/${event.id}/export`);
-                    if (response.ok) {
-                      const blob = await response.blob();
-                      const url = window.URL.createObjectURL(blob);
-                      const a = document.createElement('a');
-                      a.href = url;
-                      a.download = `statistiques-${event.name}-${new Date().toISOString().split('T')[0]}.csv`;
-                      document.body.appendChild(a);
-                      a.click();
-                      window.URL.revokeObjectURL(url);
-                      document.body.removeChild(a);
-                    } else {
-                      alert('Erreur lors de l\'export des statistiques');
-                    }
-                  } catch (error) {
-                    console.error('Erreur lors de l\'export:', error);
-                    alert('Erreur lors de l\'export des statistiques');
-                  }
-                }}
-                className="w-full bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition-colors flex items-center justify-center gap-2"
-              >
-                <Download className="w-4 h-4" />
-                Exporter les statistiques
-              </button> */}
+            </div>
+
+            <div className="bg-white rounded-lg shadow-lg p-6 border-l-4 border-orange-500">
+              <div className="flex items-center mb-4">
+                <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center mr-3">
+                  <Search className="w-5 h-5 text-orange-600" />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900">Recherche de Tickets</h3>
+              </div>
+              <p className="text-gray-600 text-sm mb-4">
+                Recherchez un ticket par son numéro pour vérifier son existence
+              </p>
             </div>
 
             <div className="bg-white rounded-lg shadow-lg p-6 border-l-4 border-purple-500 hover:shadow-xl transition-shadow cursor-pointer" onClick={() => router.push(`/admin/events/${event.id}/users`)}>
@@ -205,6 +191,9 @@ export default function EventManagementPage() {
             <ImportStats eventId={event.id} />
             <div className="mt-8">
               <TicketImport eventId={event.id} />
+            </div>
+            <div className="mt-8">
+              <TicketSearch eventId={event.id} />
             </div>
           </div>
         </div>

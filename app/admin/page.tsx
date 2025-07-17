@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import EventManager from '../../components/EventManager';
 import AdminRoute from '../../components/AdminRoute';
-import { Shield, Users, FileText, BarChart3, Calendar } from 'lucide-react';
+import { Shield, Users, FileText, BarChart3, Calendar, Search } from 'lucide-react';
 import LoadingSpinner from '../../components/LoadingSpinner';
 
 export default function AdminPage() {
@@ -99,6 +99,24 @@ export default function AdminPage() {
               <p className="text-gray-600 text-sm mb-4">
                 Créez et gérez vos festivals et événements
               </p>
+            </div>
+          </div>
+
+          {/* Deuxième ligne de fonctionnalités */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <div className="bg-white rounded-lg shadow-lg p-6 border-l-4 border-indigo-500 hover:shadow-xl transition-shadow cursor-pointer" onClick={() => router.push('/admin/ticket-search')}>
+              <div className="flex items-center mb-4">
+                <div className="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center mr-3">
+                  <Search className="w-5 h-5 text-indigo-600" />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900">Recherche de Tickets</h3>
+              </div>
+              <p className="text-gray-600 text-sm mb-4">
+                Recherchez un ticket par son numéro pour vérifier son existence
+              </p>
+              <div className="text-indigo-600 text-sm font-medium">
+                Cliquer pour accéder →
+              </div>
             </div>
           </div>
 
