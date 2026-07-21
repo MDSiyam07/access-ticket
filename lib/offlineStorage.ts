@@ -1,14 +1,21 @@
 export interface OfflineScan {
   id: string;
   ticketId: string;
-  type: 'entry' | 'exit';
+  type: 'entry' | 'exit' | 'reentry';
   timestamp: number;
   userId: string;
   userRole: string;
   status: 'pending' | 'synced' | 'failed';
   retryCount: number;
   lastRetry?: number;
+  errorMessage?: string;
 }
+
+const SCAN_TYPE_TO_ACTION: Record<OfflineScan['type'], 'ENTER' | 'EXIT' | 'REENTER'> = {
+  entry: 'ENTER',
+  exit: 'EXIT',
+  reentry: 'REENTER',
+};
 
 export interface OfflineData {
   scans: OfflineScan[];
@@ -58,20 +65,22 @@ class OfflineStorage {
     }
   }
 
-  // Marquer un scan comme échoué
-  async markScanAsFailed(scanId: string): Promise<void> {
+  // Marquer un scan comme échoué. `permanent` = rejet métier du serveur
+  // (ex: billet déjà entré) : inutile de réessayer, on échoue immédiatement.
+  async markScanAsFailed(scanId: string, errorMessage?: string, permanent = false): Promise<void> {
     const offlineData = await this.getOfflineData();
     const scanIndex = offlineData.scans.findIndex(scan => scan.id === scanId);
-    
+
     if (scanIndex !== -1) {
       const scan = offlineData.scans[scanIndex];
       scan.retryCount++;
       scan.lastRetry = Date.now();
-      
-      if (scan.retryCount >= this.MAX_RETRY_COUNT) {
+      scan.errorMessage = errorMessage;
+
+      if (permanent || scan.retryCount >= this.MAX_RETRY_COUNT) {
         scan.status = 'failed';
       }
-      
+
       await this.saveOfflineData(offlineData);
     }
   }
@@ -88,43 +97,71 @@ class OfflineStorage {
     await this.saveOfflineData(offlineData);
   }
 
-  // Synchroniser les scans en attente
+  // Synchroniser les scans en attente. Protégé contre les appels concurrents
+  // (event 'online', polling, bouton manuel peuvent se déclencher en même temps).
+  private syncing = false;
+
+  isSyncing(): boolean {
+    return this.syncing;
+  }
+
   async syncPendingScans(): Promise<{ success: number; failed: number }> {
-    const pendingScans = await this.getPendingScans();
-    let successCount = 0;
-    let failedCount = 0;
+    if (this.syncing) {
+      return { success: 0, failed: 0 };
+    }
+    this.syncing = true;
 
-    for (const scan of pendingScans) {
-      try {
-        const response = await fetch('/api/tickets/scan', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            ticketId: scan.ticketId,
-            type: scan.type,
-            userId: scan.userId,
-            userRole: scan.userRole,
-            timestamp: scan.timestamp
-          })
-        });
+    try {
+      const pendingScans = await this.getPendingScans();
+      let successCount = 0;
+      let failedCount = 0;
 
-        if (response.ok) {
-          await this.markScanAsSynced(scan.id);
-          successCount++;
-        } else {
-          await this.markScanAsFailed(scan.id);
+      for (const scan of pendingScans) {
+        // Respecter le délai de retry pour ne pas marteler le serveur
+        if (scan.lastRetry && Date.now() - scan.lastRetry < this.RETRY_DELAY) {
+          continue;
+        }
+
+        try {
+          const response = await fetch('/api/tickets/scan', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              ticketNumber: scan.ticketId,
+              action: SCAN_TYPE_TO_ACTION[scan.type],
+              entryType: 'SCAN',
+              userId: scan.userId,
+            }),
+          });
+
+          if (response.ok) {
+            await this.markScanAsSynced(scan.id);
+            successCount++;
+          } else {
+            const body = await response.json().catch(() => ({}));
+            // 4xx = rejet métier du serveur (billet déjà entré/inconnu...) : définitif.
+            // 5xx = problème serveur transitoire : on retentera plus tard.
+            const permanent = response.status >= 400 && response.status < 500;
+            await this.markScanAsFailed(scan.id, body.error, permanent);
+            failedCount++;
+          }
+        } catch (error) {
+          console.error('Erreur lors de la synchronisation:', error);
+          await this.markScanAsFailed(scan.id, 'Erreur réseau');
           failedCount++;
         }
-      } catch (error) {
-        console.error('Erreur lors de la synchronisation:', error);
-        await this.markScanAsFailed(scan.id);
-        failedCount++;
       }
-    }
 
-    return { success: successCount, failed: failedCount };
+      if (successCount > 0) {
+        await this.updateOnlineStatus(true);
+      }
+
+      return { success: successCount, failed: failedCount };
+    } finally {
+      this.syncing = false;
+    }
   }
 
   // Vérifier la connectivité

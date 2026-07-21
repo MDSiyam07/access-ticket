@@ -130,7 +130,7 @@ export default function ScanReentry() {
       if (user) {
         await offlineStorage.saveOfflineScan({
           ticketId,
-          type: 'entry',
+          type: 'reentry',
           timestamp: Date.now(),
           userId: user.id,
           userRole: user.role
