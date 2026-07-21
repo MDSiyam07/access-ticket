@@ -164,14 +164,15 @@ class OfflineStorage {
     }
   }
 
-  // Vérifier la connectivité
+  // Vérifier la connectivité. On ping une ressource statique publique
+  // (pas d'auth, pas de paramètre requis) plutôt qu'une route API métier :
+  // /api/tickets/stats exige un eventId et renvoyait donc systématiquement
+  // 400, ce qui faisait passer l'app en "hors ligne" en permanence.
   async checkConnectivity(): Promise<boolean> {
     try {
-      const response = await fetch('/api/tickets/stats', {
+      const response = await fetch(`/manifest.json?_=${Date.now()}`, {
         method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        }
+        cache: 'no-store',
       });
       return response.ok;
     } catch {
