@@ -53,7 +53,7 @@ export default function ScanSellingPage() {
         },
         body: JSON.stringify({
           ticketNumber: ticketId,
-          userId: user.id,
+          vendeurId: user.id,
         }),
       });
 

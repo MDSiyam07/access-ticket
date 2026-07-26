@@ -40,7 +40,7 @@ export default function ManualSelling() {
         },
         body: JSON.stringify({
           ticketNumber: ticketId.trim(),
-          userId: user?.id,
+          vendeurId: user?.id,
         }),
       });
 
