@@ -4,6 +4,7 @@ import { useAuth } from '../../../contexts/AuthContext';
 import { useRouter, useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import TicketImport from '../../../../components/TicketImport';
+import TicketCopy from '../../../../components/TicketCopy';
 import ImportStats from '../../../../components/ImportStats';
 import TicketSearch from '../../../../components/TicketSearch';
 import AdminRoute from '../../../../components/AdminRoute';
@@ -191,6 +192,7 @@ export default function EventManagementPage() {
             <ImportStats eventId={event.id} />
             <div className="mt-8">
               <TicketImport eventId={event.id} />
+              <TicketCopy eventId={event.id} />
             </div>
             <div className="mt-8">
               <TicketSearch eventId={event.id} />
