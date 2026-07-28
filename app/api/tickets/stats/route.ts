@@ -41,51 +41,48 @@ export async function GET(request: NextRequest) {
       },
     });
 
+    // "vendus" doit être un total cumulatif : un billet reste compté même après
+    // son passage en ENTERED/EXITED. On se base donc sur soldAt (renseigné une
+    // seule fois, à la vente, et jamais réinitialisé) plutôt que sur le statut
+    // courant (qui, lui, change à chaque scan et faisait redescendre le compteur).
     const vendus = await prisma.ticket.count({
-      where: { 
+      where: {
+        eventId: eventId,
+        soldAt: { not: null }
+      },
+    });
+
+    // Billets vendus mais pas encore scannés à l'entrée (statut encore VENDU).
+    // Contrairement à "vendus" ci-dessus, celui-ci diminue légitimement au fil
+    // des entrées : il sert à afficher "vendus en attente d'entrée".
+    const awaitingEntry = await prisma.ticket.count({
+      where: {
         eventId: eventId,
         status: 'VENDU'
       },
     });
 
     // Statistiques par type de billet
-    const statsByType = await Promise.all([
-      // NORMAL
-      prisma.ticket.groupBy({
-        by: ['status'],
-        where: { 
-          eventId: eventId,
-          ticketType: 'NORMAL'
-        },
-        _count: { status: true },
-      }),
-      // VIP
-      prisma.ticket.groupBy({
-        by: ['status'],
-        where: { 
-          eventId: eventId,
-          ticketType: 'VIP'
-        },
-        _count: { status: true },
-      }),
-      // ARTISTE
-      prisma.ticket.groupBy({
-        by: ['status'],
-        where: { 
-          eventId: eventId,
-          ticketType: 'ARTISTE'
-        },
-        _count: { status: true },
-      }),
-      // STAFF
-      prisma.ticket.groupBy({
-        by: ['status'],
-        where: { 
-          eventId: eventId,
-          ticketType: 'STAFF'
-        },
-        _count: { status: true },
-      }),
+    const ticketTypes = ['NORMAL', 'VIP', 'ARTISTE', 'STAFF'] as const;
+
+    const [statsByType, vendusByType, awaitingEntryByType] = await Promise.all([
+      Promise.all(ticketTypes.map(ticketType =>
+        prisma.ticket.groupBy({
+          by: ['status'],
+          where: { eventId, ticketType },
+          _count: { status: true },
+        })
+      )),
+      Promise.all(ticketTypes.map(ticketType =>
+        prisma.ticket.count({
+          where: { eventId, ticketType, soldAt: { not: null } },
+        })
+      )),
+      Promise.all(ticketTypes.map(ticketType =>
+        prisma.ticket.count({
+          where: { eventId, ticketType, status: 'VENDU' },
+        })
+      )),
     ]);
 
     // Formater les stats par type
@@ -94,22 +91,27 @@ export async function GET(request: NextRequest) {
       _count: { status: number };
     }
 
-    const formatStatsByType = (typeStats: TypeStats[], typeName: string) => {
+    const formatStatsByType = (
+      typeStats: TypeStats[],
+      typeName: string,
+      vendusCount: number,
+      awaitingEntryCount: number
+    ) => {
       const stats = {
         total: 0,
         entered: 0,
         exited: 0,
         pending: 0,
-        vendus: 0,
+        vendus: vendusCount,
+        awaitingEntry: awaitingEntryCount,
       };
 
       typeStats.forEach(stat => {
         const count = stat._count.status;
         stats.total += count;
-        
+
         switch (stat.status) {
           case 'ENTERED':
-          case 'EXITED':
             stats.entered += count;
             break;
           case 'EXITED':
@@ -117,9 +119,6 @@ export async function GET(request: NextRequest) {
             break;
           case 'PENDING':
             stats.pending += count;
-            break;
-          case 'VENDU':
-            stats.vendus += count;
             break;
         }
       });
@@ -131,10 +130,10 @@ export async function GET(request: NextRequest) {
     };
 
     const statsByTicketType = {
-      normal: formatStatsByType(statsByType[0], 'NORMAL'),
-      vip: formatStatsByType(statsByType[1], 'VIP'),
-      artiste: formatStatsByType(statsByType[2], 'ARTISTE'),
-      staff: formatStatsByType(statsByType[3], 'STAFF'),
+      normal: formatStatsByType(statsByType[0], 'NORMAL', vendusByType[0], awaitingEntryByType[0]),
+      vip: formatStatsByType(statsByType[1], 'VIP', vendusByType[1], awaitingEntryByType[1]),
+      artiste: formatStatsByType(statsByType[2], 'ARTISTE', vendusByType[2], awaitingEntryByType[2]),
+      staff: formatStatsByType(statsByType[3], 'STAFF', vendusByType[3], awaitingEntryByType[3]),
     };
 
     return NextResponse.json({
@@ -144,6 +143,7 @@ export async function GET(request: NextRequest) {
       exited,
       pending,
       vendus,
+      awaitingEntry,
       byType: statsByTicketType,
     });
 

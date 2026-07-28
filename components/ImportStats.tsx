@@ -27,6 +27,7 @@ interface TypeStats {
   exited: number;
   pending: number;
   vendus: number;
+  awaitingEntry: number;
 }
 
 interface ImportStatsProps {
@@ -170,9 +171,9 @@ export default function ImportStats({ eventId }: ImportStatsProps) {
             <Clock className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-blue-600">{Math.max(0, typeStats.vendus - typeStats.entered)}</div>
+            <div className="text-2xl font-bold text-blue-600">{typeStats.awaitingEntry}</div>
             <p className="text-xs text-muted-foreground">
-              Vendus - Entrés
+              Vendus, pas encore entrés
             </p>
           </CardContent>
         </Card>
